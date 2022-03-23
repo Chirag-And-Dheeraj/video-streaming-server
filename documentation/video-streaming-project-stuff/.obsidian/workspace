@@ -1,0 +1,101 @@
+{
+  "main": {
+    "id": "3d08d760785aa5dc",
+    "type": "split",
+    "children": [
+      {
+        "id": "9879df199ab5649a",
+        "type": "leaf",
+        "state": {
+          "type": "markdown",
+          "state": {
+            "file": "project idea.md",
+            "mode": "source",
+            "source": false
+          }
+        }
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "af3ba36eb3cee802",
+    "type": "split",
+    "children": [
+      {
+        "id": "a5b74a0dc02e5d2c",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "6a219b2fe7034dae",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {}
+            }
+          },
+          {
+            "id": "f037dd1e8d66f8e0",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 272.0007801055908
+  },
+  "right": {
+    "id": "3887bda239dc79b1",
+    "type": "split",
+    "children": [
+      {
+        "id": "ee11493cba7f274f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "f860ac86e80db773",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "project idea.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "active": "9879df199ab5649a",
+  "lastOpenFiles": [
+    "project idea.md",
+    "links.md",
+    "RSA move later.md",
+    "user flow.md",
+    "client.md",
+    "things to be done.md",
+    "server.md",
+    "ideas discussed.md"
+  ]
+}
