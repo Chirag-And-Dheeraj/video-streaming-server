@@ -32,3 +32,5 @@
 - https://www.howardchung.net
 - https://webrtc.org
 - https://www.google.com/search?q=rtsp+full+form
+
+- https://sidbala.com/h-264-is-magic
