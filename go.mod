@@ -1,5 +1,5 @@
 module github.com/Chirag-And-Dheeraj/video-streaming-server
 
-go 1.16
+go 1.18
 
-require github.com/joho/godotenv v1.4.0
+require github.com/mattn/go-sqlite3 v1.14.12
