@@ -26,38 +26,46 @@
         const theFile = video.files[0];
 
         fileReader.onload = async (ev) => {
-          const CHUNK_SIZE = 5000000;
-          const chunkCount = ev.target.result.byteLength / CHUNK_SIZE;
+          const CHUNK_SIZE = 1000000;
+          const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
+          console.log(chunkCount);
           console.log("Read successfully");
           const fileName = Math.random() * 1000 + theFile.name;
           console.log(fileName);
+          let total;
           for (let chunkID = 0; chunkID < chunkCount + 1; chunkID++) {
-            const chunk = ev.target.result.slice(
-              chunkID * CHUNK_SIZE,
-              chunkID * CHUNK_SIZE + CHUNK_SIZE
-            );
-
+            console.log(chunkID);
+            let chunk;
+            if (chunkID == chunkCount) {
+              chunk = ev.target.result.slice(chunkID * CHUNK_SIZE);
+            } else {
+              chunk = ev.target.result.slice(
+                chunkID * CHUNK_SIZE,
+                chunkID * CHUNK_SIZE + CHUNK_SIZE
+              );
+            }
+            console.log("Chunk size: ", chunk.byteLength);
+            total += chunk.byteLength;
             // reason for await is we want to wait for server's response and not flood the backend with all requests.
-            await fetch("http://127.0.0.1:8000/video", {
+            const response = await fetch("http://127.0.0.1:8000/video", {
               method: "POST",
               headers: {
                 "content-type": "application/octet-stream",
                 "content-length": chunk.length,
                 "file-name": fileName,
+                "file-size": ev.target.result.byteLength,
               },
               body: chunk,
             });
-            divOutput.textContent =
-              Math.round((chunkID * 100) / chunkCount, 0) + " %";
-          }
-          console.log(
-            "Successfully sent " +
-              ev.target.result.byteLength +
-              " from the client."
-          );
-        };
 
-        console.log(response);
+            console.log(await response.text());
+
+            divOutput.textContent =
+              Math.round(((chunkID + 1) / Math.ceil(chunkCount)) * 100, 0) +
+              " %";
+          }
+          console.log("Successfully sent " + total + " from the client.");
+        };
 
         fileReader.readAsArrayBuffer(theFile);
       });

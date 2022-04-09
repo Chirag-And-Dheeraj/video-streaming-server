@@ -1,0 +1,1 @@
+cls && rd /s/q video && mkdir video  && go run main.go
