@@ -7,21 +7,44 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"regexp"
+	"strconv"
 	// "github.com/Chirag-And-Dheeraj/video-streaming-server/models"
 )
+
+func breakFile(fileName string) {
+	// ffmpeg -i input.mp4 -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10 -hls_list_size 0 -f hls index.m3u8
+	// exec.Command("cd video").Run()
+	// exec.Command("dir").Run()
+
+	cmdString := fmt.Sprintf("ffmpeg -i %q -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10 -hls_list_size 0 -f hls %q.m3u8", fileName, fileName)
+	err := exec.Command(cmdString).Run()
+
+	if err != nil {
+		panic(err)
+	}
+}
 
 func videoHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Video upload endpoint hit...")
 	fileName := r.Header.Get("file-name")
-	fmt.Println("Name of the file received: " + fileName)	
+	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
+	fmt.Println("Name of the file received:", fileName)	
+	fmt.Println("Size of the file received:", fileSize)
 	d, _ := ioutil.ReadAll(r.Body)
 	tmpFile, _ := os.OpenFile("./video/"+fileName, os.O_APPEND|os.O_CREATE, 0644)
-	defer tmpFile.Close()
 	tmpFile.Write(d)
 	fmt.Fprintf(w, "Received chunk!")
-	w.WriteHeader(200)
-	return
+
+	fileInfo, _ := tmpFile.Stat()
+	fmt.Println(fileInfo.Size())
+	fmt.Println("Extra:", int64(fileSize) - int64(fileInfo.Size()))
+	if fileInfo.Size() == int64(fileSize) {
+		// breakFile(fileName)
+		fmt.Fprintf(w, "\nFile received completely!!")
+	}
+	fmt.Println("---------------------------------------------------------------------")
 }
 
 var validPath = regexp.MustCompile("^/(upload)/([a-zA-Z0-9]+)$")
