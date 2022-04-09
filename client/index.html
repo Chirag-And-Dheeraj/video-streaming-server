@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Upload and Streaming Service</title>
+  </head>
+  <body>
+    <h1>Video Upload and Streaming Service</h1>
+    <hr />
+    <h2>Upload video</h2>
+    <br />
+    <input type="file" name="video" id="video" />
+    <button id="uploadVideoButton">Read & Upload</button>
+    <div id="divOutput"></div>
+
+    <script>
+      const uploadVideoButton = document.getElementById("uploadVideoButton");
+      const divOutput = document.getElementById("divOutput");
+      const video = document.getElementById("video");
+
+      uploadVideoButton.addEventListener("click", () => {
+        console.log("Read and upload button hit!");
+        const fileReader = new FileReader();
+        const theFile = video.files[0];
+
+        fileReader.onload = async (ev) => {
+          const CHUNK_SIZE = 900000;
+          const chunkCount = ev.target.result.byteLength / CHUNK_SIZE;
+          console.log("Read successfully");
+          const fileName = Math.random() * 1000 + theFile.name;
+          console.log(fileName);
+          for (let chunkID = 0; chunkID < chunkCount + 1; chunkID++) {
+            const chunk = ev.target.result.slice(
+              chunkID * CHUNK_SIZE,
+              chunkID * CHUNK_SIZE + CHUNK_SIZE
+            );
+
+            // reason for await is we want to wait for server's response and not flood the backend with all requests.
+            await fetch("http://127.0.0.1:8000/video", {
+              method: "POST",
+              headers: {
+                "content-type": "application/octet-stream",
+                "content-length": chunk.length,
+                "file-name": fileName,
+              },
+              body: chunk,
+            });
+          }
+          console.log(ev.target.result.byteLength);
+        };
+
+        fileReader.readAsArrayBuffer(theFile);
+      });
+    </script>
+  </body>
+</html>
