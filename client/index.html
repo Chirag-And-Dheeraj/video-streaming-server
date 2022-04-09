@@ -26,7 +26,7 @@
         const theFile = video.files[0];
 
         fileReader.onload = async (ev) => {
-          const CHUNK_SIZE = 900000;
+          const CHUNK_SIZE = 5000000;
           const chunkCount = ev.target.result.byteLength / CHUNK_SIZE;
           console.log("Read successfully");
           const fileName = Math.random() * 1000 + theFile.name;
@@ -47,9 +47,17 @@
               },
               body: chunk,
             });
+            divOutput.textContent =
+              Math.round((chunkID * 100) / chunkCount, 0) + " %";
           }
-          console.log(ev.target.result.byteLength);
+          console.log(
+            "Successfully sent " +
+              ev.target.result.byteLength +
+              " from the client."
+          );
         };
+
+        console.log(response);
 
         fileReader.readAsArrayBuffer(theFile);
       });
