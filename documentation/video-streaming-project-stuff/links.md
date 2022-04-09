@@ -47,4 +47,5 @@
 - https://golangbyexample.com/octet-stream-http-golang
 - https://www.developer.com/languages/intro-file-handling-golang
 - https://www.educative.io/edpresso/how-to-append-to-a-file-in-golang
-
+- https://uploadcare.com/blog/handling-large-file-uploads/
+- https://www.quora.com/If-youre-writing-a-script-to-upload-a-file-to-a-server-in-chunks-what-should-be-the-limit-on-chunk-size
