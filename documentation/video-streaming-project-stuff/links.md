@@ -34,3 +34,17 @@
 - https://www.google.com/search?q=rtsp+full+form
 
 - https://sidbala.com/h-264-is-magic
+
+09/02/2022
+
+- https://www.youtube.com/watch?v=Ix-c2X7dlks
+- https://pkg.go.dev/net/http#FileServer
+- https://levelup.gitconnected.com/serving-static-files-using-a-go-web-server-75ca9d3cf8d
+- https://stackoverflow.com/questions/26559557/how-do-you-serve-a-static-html-file-using-a-go-web-server/58655915#58655915
+- https://appdividend.com/2019/12/16/how-to-create-file-in-golang-go-create-file-example
+- https://gabrieltanner.org/blog/golang-file-uploading
+- https://www.eventslooped.com/posts/chunked-file-upload-typescript-react-go
+- https://golangbyexample.com/octet-stream-http-golang
+- https://www.developer.com/languages/intro-file-handling-golang
+- https://www.educative.io/edpresso/how-to-append-to-a-file-in-golang
+
