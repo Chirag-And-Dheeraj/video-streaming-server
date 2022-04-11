@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -15,6 +15,68 @@
     <button id="uploadVideoButton">Read & Upload</button>
     <div id="divOutput"></div>
 
+    
+  </body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Streaming Service</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body>
+    <main class="grid grid-cols-6">
+      <form id="video-form" class="grid col-start-3 col-end-5 space-y-5">
+        <div>
+          <label class="block" for="title">Title</label>
+          <input
+            class="border w-full"
+            id="title"
+            type="text"
+            name="title"
+            value=""
+          />
+        </div>
+
+        <div>
+          <label class="block" for="description">Description</label>
+          <textarea
+            class="border w-full"
+            id="description"
+            type="text"
+            name="description"
+          ></textarea>
+        </div>
+
+        <div class="border border-black p-5">
+          <!-- <button
+            class="border rounded px-3 py-2 bg-indigo-500 text-white"
+            id="upload"
+            type="button"
+          >
+            Upload Video
+          </button> -->
+          <input
+            id="video"
+            class=""
+            type="file"
+            name="video"
+            value=""
+          />
+        </div>
+
+        <input
+          id="uploadVideoButton"
+          class="border rounded px-3 py-2 bg-indigo-500 text-white cursor-pointer"
+          value="Submit"
+        />
+        <div id="divOutput"></div>
+      </form>
+    </main>
     <script>
       const uploadVideoButton = document.getElementById("uploadVideoButton");
       const divOutput = document.getElementById("divOutput");
@@ -26,13 +88,13 @@
         const theFile = video.files[0];
 
         fileReader.onload = async (ev) => {
-          const CHUNK_SIZE = 1000000;
+          const CHUNK_SIZE = 5000;
           const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
           console.log(chunkCount);
           console.log("Read successfully");
           const fileName = Math.random() * 1000 + theFile.name;
           console.log(fileName);
-          let total;
+          let sent = 0;
           for (let chunkID = 0; chunkID < chunkCount + 1; chunkID++) {
             console.log(chunkID);
             let chunk;
@@ -44,8 +106,8 @@
                 chunkID * CHUNK_SIZE + CHUNK_SIZE
               );
             }
-            console.log("Chunk size: ", chunk.byteLength);
-            total += chunk.byteLength;
+            console.log("Chunk byteLength: ", chunk.byteLength);
+            sent += chunk.byteLength;
             // reason for await is we want to wait for server's response and not flood the backend with all requests.
             const response = await fetch("http://127.0.0.1:8000/video", {
               method: "POST",
@@ -61,10 +123,9 @@
             console.log(await response.text());
 
             divOutput.textContent =
-              Math.round(((chunkID + 1) / Math.ceil(chunkCount)) * 100, 0) +
-              " %";
+              Math.round((sent / ev.target.result.byteLength) * 100, 0) + " %";
           }
-          console.log("Successfully sent " + total + " from the client.");
+          console.log("Successfully sent " + sent + " from the client.");
         };
 
         fileReader.readAsArrayBuffer(theFile);

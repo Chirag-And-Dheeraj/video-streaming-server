@@ -18,7 +18,7 @@ func breakFile(fileName string) {
 	// exec.Command("cd video").Run()
 	// exec.Command("dir").Run()
 
-	cmdString := fmt.Sprintf("ffmpeg -i %q -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10 -hls_list_size 0 -f hls %q.m3u8", fileName, fileName)
+	cmdString := fmt.Sprintf("ffmpeg -i %s -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10 -hls_list_size 0 -f hls %s.m3u8", "video/" + fileName, "video/" + fileName)
 	err := exec.Command(cmdString).Run()
 
 	if err != nil {
@@ -66,6 +66,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	initServer()
-	fmt.Println("Server is running on port", 8000)
+	fmt.Println("Server is running on http://127.0.0.1:8000")
 	log.Fatal(http.ListenAndServe("127.0.0.1:8000", nil))
 }
