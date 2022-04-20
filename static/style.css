@@ -1,0 +1,132 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  /* border: solid red 2px; */
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background-color: black;
+  color: azure;
+  font-family: "Manrope", sans-serif;
+  min-height: 95vh;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1em;
+}
+
+header a {
+  text-decoration: none;
+}
+
+header a h1 {
+  font-family: "Megrim", cursive;
+  font-size: 2.5em;
+  color: whitesmoke;
+}
+
+header nav ul {
+  display: flex;
+  list-style-type: none;
+}
+
+/* header nav ul li a {
+  text-decoration: none;
+  color: #000000;
+  background-color: #ffffff;
+  font-size: 1.5em;
+  border-radius: 5px;
+  padding: 0.25em;
+  margin: 0.25em;
+} */
+
+header nav ul li a {
+  text-decoration: none;
+  background-color: #000000;
+  font-size: 1.5em;
+  font-family: "Megrim", cursive;
+  /* border-radius: 5px; */
+  padding: 0.25em;
+  margin: 0.25em;
+  transition: 0.5s;
+}
+
+header nav ul li a:hover {
+  border-bottom: solid white 2px;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 22px;
+  text-align: center;
+}
+
+main section {
+  width: 50vw;
+}
+
+.page-title {
+  font-family: "Megrim", cursive;
+  font-size: 2.5em;
+  color: whitesmoke;
+}
+
+main section ul {
+  display: inline-block;
+  list-style-type: armenian;
+  text-align: justify;
+  list-style-position: inside;
+}
+
+main form {
+  display: flex;
+  flex-direction: column;
+  /* border: solid red 2px; */
+  padding: 0.5em;
+  margin: 0.5em;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* align-items: center; */
+  text-align: left;
+  /* text-align-last: center; */
+}
+
+main form label,
+main form input,
+main form textarea,
+#uploadFileButton {
+  font-size: 1.125em;
+  border-radius: 5px;
+  outline: none;
+  border: none;
+  padding: 0.25em;
+  margin: 0.125em;
+  /* text-align: center; */
+  /* text-align-last: center; */
+  width: 100%;
+}
+
+.main-index {
+  margin-top: 3em;
+}
+
+.special-red {
+  color: red;
+}
+
+.special-blue {
+  color: blue;
+}
+
+#uploadFileButton {
+  cursor: pointer;
+}

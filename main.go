@@ -13,18 +13,26 @@ import (
 	// "github.com/Chirag-And-Dheeraj/video-streaming-server/models"
 )
 
-func breakFile(fileName string) {
-	// ffmpeg -i input.mp4 -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10 -hls_list_size 0 -f hls index.m3u8
-	// exec.Command("cd video").Run()
-	// exec.Command("dir").Run()
+func breakFile(videoPath string, fileName string) {
+	// ffmpeg -y -i DearZindagi.mkv -codec copy -map 0 -f segment -segment_time 7 -segment_format mpegts -segment_list DearZindagi_index.m3u8 -segment_list_type m3u8 ./segment_no_%d.ts
 
-	cmdString := fmt.Sprintf("ffmpeg -i %s -profile:v baseline -level 3.0 -s 640x360 -start_number 0 -hls_time 10 -hls_list_size 0 -f hls %s.m3u8", "video/" + fileName, "video/" + fileName)
-	err := exec.Command(cmdString).Run()
+	cmd := exec.Command("ffmpeg", "-y" , "-i" , videoPath, "-codec", "copy", "-map", "0","-f", "segment", "-segment_time", "10", "-segment_format", "mpegts", "-segment_list", "D:/segments/" + fileName + ".m3u8", "-segment_list_type", "m3u8", "D:/segments/" + fileName + "_" + "segment_no_%d.ts")
 
+	output, err := cmd.CombinedOutput()
+
+	// err := cmd.Run()
 	if err != nil {
-		panic(err)
+		fmt.Printf("%s\n", output)
+		log.Fatal(err)
+	} else {
+		fmt.Printf("Tod di file, tukdo tukdo mein.")
 	}
 }
+
+// func runCommand(w http.ResponseWriter, r *http.Request) {
+// 	breakFile(fileName)	
+// }
+
 
 func videoHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Video upload endpoint hit...")
@@ -41,17 +49,23 @@ func videoHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(fileInfo.Size())
 	fmt.Println("Extra:", int64(fileSize) - int64(fileInfo.Size()))
 	if fileInfo.Size() == int64(fileSize) {
-		// breakFile(fileName)
 		fmt.Fprintf(w, "\nFile received completely!!")
+		fmt.Println("Todne ka prayaas chalu hain....")
+		breakFile(("./video/"+fileName), fileName)
 	}
+
 	fmt.Println("---------------------------------------------------------------------")
 }
 
 var validPath = regexp.MustCompile("^/(upload)/([a-zA-Z0-9]+)$")
 
 func setUpRoutes() {
-	http.HandleFunc("/", homeHandler)
+	http.HandleFunc("/", homePageHandler)
+	http.HandleFunc("/upload",uploadPageHandler)
+	http.HandleFunc("/view", viewPageHandler)
 	http.HandleFunc("/video", videoHandler)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	// http.HandleFunc("/cmd", runCommand)
 }
 
 func initServer() {
@@ -59,8 +73,18 @@ func initServer() {
 	setUpRoutes()
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
+func homePageHandler(w http.ResponseWriter, r *http.Request) {
 	p := "./client/index.html"
+	http.ServeFile(w, r, p)
+}
+
+func uploadPageHandler(w http.ResponseWriter, r *http.Request) {
+	p := "./client/upload.html"
+	http.ServeFile(w, r, p)
+}
+
+func viewPageHandler(w http.ResponseWriter, r *http.Request) {
+	p := "./client/view.html"
 	http.ServeFile(w, r, p)
 }
 

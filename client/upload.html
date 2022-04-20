@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400&family=Megrim&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../static/style.css" />
+    <title>Room of Requirement: Your very own - Large File Storage</title>
+  </head>
+  <body>
+    <header>
+      <a href="/"><h1>Room of Requirement</h1></a>
+      <nav>
+        <ul>
+          <li><a class="special-blue" href="/upload">Upload</a></li>
+          <li><a class="special-red" href="/view">View Files</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main>
+      <h1 class="page-title special-red">Upload</h1>
+      <form id="file-form">
+        <label class="" for="title">Title</label>
+        <input
+          id="title"
+          type="text"
+          name="title"
+          placeholder="Rajasthan Picnic"
+        />
+        <label class="block" for="description">Description</label>
+        <textarea
+          id="description"
+          type="text"
+          name="description"
+          placeholder="Jaisalmer Sand Dunes photoshoot..."
+        ></textarea>
+        <label class="" for="file">Drop that file...</label>
+        <input id="file" type="file" name="file" />
+        <label class="" for="tags">
+          Tags (<span class="special-blue">space separated</span>)
+        </label>
+        <input
+          id="tags"
+          type="text"
+          name="tags"
+          placeholder="picnic rajasthan january"
+        />
+        <br />
+        <button id="uploadFileButton">Submit</button>
+
+        <div id="divOutput"></div>
+      </form>
+    </main>
+    <script>
+      const uploadFileButton = document.getElementById("uploadFileButton");
+      const divOutput = document.getElementById("divOutput");
+      const file = document.getElementById("file");
+
+      uploadFileButton.addEventListener("click", () => {
+        console.log("Read and upload button hit!");
+        const fileReader = new FileReader();
+        const theFile = file.files[0];
+
+        fileReader.onload = async (ev) => {
+          const CHUNK_SIZE = 5000000;
+          const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
+          console.log(chunkCount);
+          console.log("Read successfully");
+          const fileName = Math.random() * 1000 + theFile.name;
+          console.log(fileName);
+          let sent = 0;
+          for (let chunkID = 0; chunkID < chunkCount + 1; chunkID++) {
+            console.log(chunkID);
+            let chunk;
+            if (chunkID == chunkCount) {
+              chunk = ev.target.result.slice(chunkID * CHUNK_SIZE);
+            } else {
+              chunk = ev.target.result.slice(
+                chunkID * CHUNK_SIZE,
+                chunkID * CHUNK_SIZE + CHUNK_SIZE
+              );
+            }
+            console.log("Chunk byteLength: ", chunk.byteLength);
+            sent += chunk.byteLength;
+            // reason for await is we want to wait for server's response and not flood the backend with all requests.
+            const response = await fetch("http://127.0.0.1:8000/file", {
+              method: "POST",
+              headers: {
+                "content-type": "application/octet-stream",
+                "content-length": chunk.length,
+                "file-name": fileName,
+                "file-size": ev.target.result.byteLength,
+              },
+              body: chunk,
+            });
+
+            console.log(await response.text());
+
+            divOutput.textContent =
+              Math.round((sent / ev.target.result.byteLength) * 100, 0) + " %";
+          }
+          console.log("Successfully sent " + sent + " from the client.");
+        };
+
+        fileReader.readAsArrayBuffer(theFile);
+      });
+    </script>
+  </body>
+</html>
