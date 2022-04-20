@@ -16,7 +16,7 @@ import (
 func breakFile(videoPath string, fileName string) {
 	// ffmpeg -y -i DearZindagi.mkv -codec copy -map 0 -f segment -segment_time 7 -segment_format mpegts -segment_list DearZindagi_index.m3u8 -segment_list_type m3u8 ./segment_no_%d.ts
 
-	cmd := exec.Command("ffmpeg", "-y" , "-i" , videoPath, "-codec", "copy", "-map", "0","-f", "segment", "-segment_time", "10", "-segment_format", "mpegts", "-segment_list", "D:/segments/" + fileName + ".m3u8", "-segment_list_type", "m3u8", "D:/segments/" + fileName + "_" + "segment_no_%d.ts")
+	cmd := exec.Command("ffmpeg", "-y" , "-i" , videoPath, "-codec", "copy", "-map", "0","-f", "segment", "-segment_time", "10", "-segment_format", "mpegts", "-segment_list", "C:\\Users\\Dell\\Desktop\\Documents\\Projects\\Video-Streaming\\video-streaming-server\\segments\\" + fileName + ".m3u8", "-segment_list_type", "m3u8", "C:\\Users\\Dell\\Desktop\\Documents\\Projects\\Video-Streaming\\video-streaming-server\\segments\\" + fileName + "_" + "segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
 
@@ -40,6 +40,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request) {
 	tmpFile, _ := os.OpenFile("./video/"+fileName, os.O_APPEND|os.O_CREATE, 0644)
 	tmpFile.Write(d)
 	fmt.Fprintf(w, "Received chunk!")
+	defer tmpFile.Close()
 
 	fileInfo, _ := tmpFile.Stat()
 	fmt.Println(fileInfo.Size())
@@ -48,6 +49,33 @@ func videoHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "\nFile received completely!!")
 		fmt.Println("Todne ka prayaas chalu hain....")
 		breakFile(("./video/"+fileName), fileName)
+
+		initializeUpload := fmt.Sprintf("https://drive.deta.sh/v1/c0unaxfn/video-streaming-server/uploads?name=%s", fileName)
+		log.Println(initializeUpload)
+
+		request, err := http.NewRequest("POST", initializeUpload, nil)
+		request.Header.Add("X-Api-Key", "c0unaxfn_ko3rZF19Rr1S9Xx8XJswQvMn6uxnH9nw")
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		client := &http.Client{}
+
+    	response, err := client.Do(request)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+    	defer response.Body.Close()
+
+		body, err := ioutil.ReadAll(response.Body)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Printf(string(body))
 	}
 
 	fmt.Println("---------------------------------------------------------------------")
