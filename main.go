@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
@@ -10,8 +11,34 @@ import (
 	"os/exec"
 	"regexp"
 	"strconv"
+	"strings"
 	// "github.com/Chirag-And-Dheeraj/video-streaming-server/models"
 )
+
+func loadEnvVars() {
+	fmt.Println("Setting environment variables...")
+	
+	envFile, err := os.Open(".env")
+	
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	defer envFile.Close()
+	
+	scanner := bufio.NewScanner(envFile)
+	
+	for scanner.Scan() {
+		lineSplit := strings.Split(scanner.Text(), "=")
+		os.Setenv(lineSplit[0], lineSplit[1])
+	}
+
+	if err := scanner.Err(); err != nil {
+        log.Fatal(err)
+    }
+
+	fmt.Println("Environment variables set.")	
+}
 
 func breakFile(videoPath string, fileName string) {
 	// ffmpeg -y -i DearZindagi.mkv -codec copy -map 0 -f segment -segment_time 7 -segment_format mpegts -segment_list DearZindagi_index.m3u8 -segment_list_type m3u8 ./segment_no_%d.ts
@@ -110,7 +137,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request) {
 			uploadChunk := fmt.Sprintf("https://drive.deta.sh/v1/{id}/video-streaming-server/files?name=%s/%s", fileName, file.Name())
 
 			request, err := http.NewRequest("POST", uploadChunk, postBody)
-			request.Header.Add("X-Api-Key", {key})
+			request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
 
 			client := &http.Client{}
 
@@ -137,12 +164,15 @@ func videoHandler(w http.ResponseWriter, r *http.Request) {
 var validPath = regexp.MustCompile("^/(upload)/([a-zA-Z0-9]+)$")
 
 func setUpRoutes() {
+	fmt.Println("Setting up routes...")
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/video", videoHandler)
+	fmt.Println("Routes set.")
 }
 
 func initServer() {
 	fmt.Println("Initializing server...")
+	loadEnvVars()
 	setUpRoutes()
 }
 
