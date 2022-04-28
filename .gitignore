@@ -1,3 +1,5 @@
 .env
 video/
 segments/
+detakeys.txt
+env.go
