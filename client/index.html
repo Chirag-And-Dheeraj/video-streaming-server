@@ -51,21 +51,38 @@
       </form>
     </main>
     <script>
-      const uploadVideoButton = document.getElementById("uploadVideoButton");
-      const divOutput = document.getElementById("divOutput");
-      const video = document.getElementById("video");
+      let uploadVideoButton = document.getElementById("uploadVideoButton");
+      let divOutput = document.getElementById("divOutput");
+      let video = document.getElementById("video");
+      let title = document.getElementById("title");
+      let description = document.getElementById("description");
+
+      function make_id(length) {
+        var result = "";
+        var characters =
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        var charactersLength = characters.length;
+        for (var i = 0; i < length; i++) {
+          result += characters.charAt(
+            Math.floor(Math.random() * charactersLength)
+          );
+        }
+        return result;
+      }
 
       uploadVideoButton.addEventListener("click", () => {
+        console.log(title.value);
+        console.log(description.value);
         console.log("Read and upload button hit!");
         const fileReader = new FileReader();
         const theFile = video.files[0];
 
         fileReader.onload = async (ev) => {
-          const CHUNK_SIZE = 1000000;
+          const CHUNK_SIZE = 5000000;
           const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
           console.log(chunkCount);
           console.log("Read successfully");
-          const fileName = Math.random() * 1000 + theFile.name;
+          const fileName = make_id(7) + "_" + theFile.name;
           console.log(fileName);
           let sent = 0;
           for (let chunkID = 0; chunkID < chunkCount + 1; chunkID++) {
@@ -81,6 +98,10 @@
             }
             console.log("Chunk byteLength: ", chunk.byteLength);
             sent += chunk.byteLength;
+            firstChunk = false;
+            if (chunkID == 0) {
+              firstChunk = true;
+            }
             // reason for await is we want to wait for server's response and not flood the backend with all requests.
             const response = await fetch("http://127.0.0.1:8000/video", {
               method: "POST",
@@ -89,6 +110,9 @@
                 "content-length": chunk.length,
                 "file-name": fileName,
                 "file-size": ev.target.result.byteLength,
+                "first-chunk": firstChunk,
+                title: title.value,
+                description: description.value,
               },
               body: chunk,
             });

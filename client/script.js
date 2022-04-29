@@ -8,7 +8,7 @@ uploadVideoButton.addEventListener("click", () => {
   const theFile = video.files[0];
 
   fileReader.onload = async (ev) => {
-    const CHUNK_SIZE = 1000000;
+    const CHUNK_SIZE = 10000000;
     const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
     console.log(chunkCount);
     console.log("Read successfully");

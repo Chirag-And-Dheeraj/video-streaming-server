@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -12,11 +13,12 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	// "github.com/Chirag-And-Dheeraj/video-streaming-server/models"
+	"time"
+	"video-streaming-server/database"
 )
 
 func loadEnvVars() {
-	fmt.Println("Setting environment variables...")
+	log.Println("Setting environment variables...")
 	
 	envFile, err := os.Open(".env")
 	
@@ -37,17 +39,17 @@ func loadEnvVars() {
         log.Fatal(err)
     }
 
-	fmt.Println("Environment variables set.")	
+	log.Println("Environment variables set.")	
 }
 
-func breakFile(videoPath string, fileName string) {
+func breakFile (videoPath string, fileName string) bool {
 	// ffmpeg -y -i DearZindagi.mkv -codec copy -map 0 -f segment -segment_time 7 -segment_format mpegts -segment_list DearZindagi_index.m3u8 -segment_list_type m3u8 ./segment_no_%d.ts
 
 	if err := os.Mkdir(fmt.Sprintf("segments/%s", fileName), os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
 
-	cmd := exec.Command("ffmpeg", "-y" , "-i" , videoPath, "-codec", "copy", "-map", "0","-f", "segment", "-segment_time", "10", "-segment_format", "mpegts", "-segment_list", "C:\\Users\\Dell\\Desktop\\Documents\\Projects\\Video-Streaming\\video-streaming-server\\segments\\" + fileName + "\\" + fileName + ".m3u8", "-segment_list_type", "m3u8", "C:\\Users\\Dell\\Desktop\\Documents\\Projects\\Video-Streaming\\video-streaming-server\\segments\\"  + fileName + "\\" + fileName + "_" + "segment_no_%d.ts")
+	cmd := exec.Command("ffmpeg", "-y" , "-i" , videoPath, "-codec", "copy", "-map", "0","-f", "segment", "-segment_time", "10", "-segment_format", "mpegts", "-segment_list", "D:\\ideas\\video-streaming-server\\segments\\" + fileName + "\\" + fileName + ".m3u8", "-segment_list_type", "m3u8", "D:\\ideas\\video-streaming-server\\segments\\"  + fileName + "\\" + fileName + "_" + "segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
 
@@ -55,86 +57,92 @@ func breakFile(videoPath string, fileName string) {
 	if err != nil {
 		fmt.Printf("%s\n", output)
 		log.Fatal(err)
+		return false
 	} else {
-		fmt.Printf("Tod di file, tukdo tukdo mein.")
+		return true
 	}
 }
 
-func videoHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(r.Method)
-	fmt.Println("Video upload endpoint hit...")
+func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	// log.Println(r.Method)
+	// log.Println("Video upload endpoint hit...")
 	fileName := r.Header.Get("file-name")
+	isFirstChunk := r.Header.Get("first-chunk")
 	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
-	fmt.Println("Name of the file received:", fileName)
-	fmt.Println("Size of the file received:", fileSize)
-	d, _ := ioutil.ReadAll(r.Body)
-	tmpFile, _ := os.OpenFile("./video/"+fileName, os.O_APPEND|os.O_CREATE, 0644)
-	tmpFile.Write(d)
-	fmt.Fprintf(w, "Received chunk!")
-	defer tmpFile.Close()
 
-	fileInfo, _ := tmpFile.Stat()
-	fmt.Println(fileInfo.Size())
-	fmt.Println("Extra:", int64(fileSize) - int64(fileInfo.Size()))
-	if fileInfo.Size() == int64(fileSize) {
-		fmt.Fprintf(w, "\nFile received completely!!")
-		fmt.Println("Todne ka prayaas chalu hain....")
-		breakFile(("./video/"+fileName), fileName)
+	if isFirstChunk == "true" {
+		title := r.Header.Get("title")
+		description := r.Header.Get("description")
+		log.Println("Started receiving chunks for: " + fileName)
+		log.Println("Size of the file received:", fileSize)
+		log.Println("Title: ", title)
+		log.Println("Description: ", description)
+		log.Println("Creating a database record...")
 
-		// initializeUpload := fmt.Sprintf("https://drive.deta.sh/v1/c0unaxfn/video-streaming-server/uploads?name=%s", fileName)
-		// log.Println(initializeUpload)
+		insertStatement, err := db.Prepare(`INSERT INTO videos
+		(
+			file_name,
+			title,
+			description,
+			upload_initiate_time,
+			upload_status
+		) VALUES (?,?,?,?,?);`)
 
-		// request, err := http.NewRequest("POST", initializeUpload, nil)
-		// request.Header.Add("X-Api-Key", "c0unaxfn_dRDfc2XqobqBNYTeZcZf4uLZAZTrkoRb")
-		// log.Println(request)
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
-
-		// client := &http.Client{}
-
-    	// response, err := client.Do(request)
-
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
-    	// defer response.Body.Close()
-
-		// jsonBody, err := ioutil.ReadAll(response.Body)
-
-		// if err != nil {
-		// 	log.Fatal(err)
-		// }
-
-		// log.Printf(string(jsonBody))
-
-		// body := make(map[string]interface{})
-		// er := json.Unmarshal(jsonBody, &body)
-
-		// if er != nil {
-		// 	log.Fatal(err)
-		// }
-
-		// log.Println(body["upload_id"])
-
-		// for i := 0; i < ; i++ {
-		// 	chunkUpload := fmt.Sprintf("https://drive.deta.sh/v1/c0unaxfn/video-streaming-server/uploads/%s/parts?name=%s&part=%s", body["upload_id"], fileName, i)
-
-		// 	req, err := http.NewRequest("POST", chunkUpload, )
-		// 	req.Header.Add("X-Api-Key", "c0unaxfn_dRDfc2XqobqBNYTeZcZf4uLZAZTrkoRb")
-		// }
-		
-		files, err := ioutil.ReadDir(fmt.Sprintf("segments/%s", fileName))
 		if err != nil {
 			log.Fatal(err)
 		}
-		for _, file := range files {
+
+		result, err := insertStatement.Exec(fileName, title, description, time.Now(),0)
+
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.Println(result)
+			log.Print("Database record created.")
+		}
+
+	}
+	
+	d, _ := ioutil.ReadAll(r.Body)
+	tmpFile, _ := os.OpenFile("./video/"+fileName, os.O_APPEND|os.O_CREATE, 0644)
+	tmpFile.Write(d)
+	
+	// fmt.Fprintf(w, "Received chunk!")
+	defer tmpFile.Close()
+
+	fileInfo, _ := tmpFile.Stat()
+	
+	// log.Println(fileInfo.Size())
+	// log.Println("Extra:", int64(fileSize) - int64(fileInfo.Size()))
+	
+	if fileInfo.Size() == int64(fileSize) {
+		fmt.Fprintf(w, "\nFile received completely!!")
+		log.Println("Received all chunks for: " + fileName)
+		log.Println("Breaking the video into .ts files.")
+
+		breakResult := breakFile(("./video/"+fileName), fileName)
+
+		if breakResult {
+			log.Println("Successfully broken " + fileName + " into .ts files.")
+		} else {
+			log.Println("Error breaking " + fileName + " into .ts files.")
+		}
+		
+		files, err := ioutil.ReadDir(fmt.Sprintf("segments/%s", fileName))
+		
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Println("Now uploading chunks of " + fileName + " to Deta Drive...")
+
+		for _ , file := range files {
 			fileBytes, err := ioutil.ReadFile(fmt.Sprintf("segments/%s/%s", fileName, file.Name()))
 			if err != nil {
 				log.Fatal(err)
 			}
 			postBody := bytes.NewBuffer(fileBytes)
-			uploadChunk := fmt.Sprintf("https://drive.deta.sh/v1/{id}/video-streaming-server/files?name=%s/%s", fileName, file.Name())
+			uploadChunk := fmt.Sprintf("https://drive.deta.sh/v1/"+ os.Getenv("PROJECT_ID") + "/video-streaming-server/files?name=%s/%s", fileName, file.Name())
 
 			request, err := http.NewRequest("POST", uploadChunk, postBody)
 			request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
@@ -146,34 +154,54 @@ func videoHandler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Fatal(err)
 			}
+			// log.Println("Chunk number", i, "uploaded successfully.")
 			defer response.Body.Close()
-
-			jsonBody, err := ioutil.ReadAll(response.Body)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			log.Printf(string(jsonBody))
 		}
-	}
+		log.Println("Successfully uploaded chunks of", fileName, "to Deta Drive")
+		log.Println("Updating upload status in database record...")
+		updateStatement, err := db.Prepare(`
+		UPDATE
+			videos 
+		SET 
+			upload_status=?,
+			upload_end_time=?
+		WHERE
+			file_name=?;
+		`)
 
-	fmt.Println("---------------------------------------------------------------------")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		result, err := updateStatement.Exec(1, time.Now(), fileName)
+
+		if err != nil {
+			log.Fatal(err)
+		} else {
+			log.Println(result)
+			log.Print("Database record updated.")
+		}
+
+	}
+	// log.Println("---------------------------------------------------------------------")
 }
 
 var validPath = regexp.MustCompile("^/(upload)/([a-zA-Z0-9]+)$")
 
-func setUpRoutes() {
-	fmt.Println("Setting up routes...")
+func setUpRoutes(db *sql.DB) {
+	log.Println("Setting up routes...")
 	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/video", videoHandler)
-	fmt.Println("Routes set.")
+	http.HandleFunc("/video", func (w http.ResponseWriter, r *http.Request) {
+		videoHandler(w, r, db)
+	})
+	log.Println("Routes set.")
 }
 
 func initServer() {
-	fmt.Println("Initializing server...")
+	log.Println("Initializing server...")
 	loadEnvVars()
-	setUpRoutes()
+	db := database.Connect()
+	setUpRoutes(db)
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -183,6 +211,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	initServer()
-	fmt.Println("Server is running on http://127.0.0.1:8000")
+	log.Println("Server is running on http://127.0.0.1:8000")
 	log.Fatal(http.ListenAndServe("127.0.0.1:8000", nil))
 }
