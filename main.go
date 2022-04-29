@@ -52,8 +52,7 @@ func breakFile (videoPath string, fileName string) bool {
 	cmd := exec.Command("ffmpeg", "-y" , "-i" , videoPath, "-codec", "copy", "-map", "0","-f", "segment", "-segment_time", "10", "-segment_format", "mpegts", "-segment_list", "D:\\ideas\\video-streaming-server\\segments\\" + fileName + "\\" + fileName + ".m3u8", "-segment_list_type", "m3u8", "D:\\ideas\\video-streaming-server\\segments\\"  + fileName + "\\" + fileName + "_" + "segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
-
-	// err := cmd.Run()
+	
 	if err != nil {
 		fmt.Printf("%s\n", output)
 		log.Fatal(err)
@@ -64,9 +63,8 @@ func breakFile (videoPath string, fileName string) bool {
 }
 
 func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	// log.Println(r.Method)
-	// log.Println("Video upload endpoint hit...")
-	fileName := r.Header.Get("file-name")
+	if r.Method == "POST" {
+		fileName := r.Header.Get("file-name")
 	isFirstChunk := r.Header.Get("first-chunk")
 	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
 
@@ -180,10 +178,55 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		} else {
 			log.Println(result)
 			log.Print("Database record updated.")
+			log.Println("Finished uploading", fileName, " :)")
 		}
 
 	}
 	// log.Println("---------------------------------------------------------------------")
+	} else if r.Method == "GET" {
+		log.Println("Get request on the video endpoint :)")
+		log.Println("Querying the database now for a list of videos...")
+		rows, err := db.Query(`
+			SELECT 
+				video_id,
+				title,
+				description,
+				file_name
+			FROM
+				videos; 
+		`)
+
+		if err != nil {
+			log.Fatal(err)
+		} 
+
+		defer rows.Close()
+
+		log.Println("Query executed.")
+		log.Println("Now printing results...")
+
+		for rows.Next() {
+			var video_id int;
+			var title string;
+			var description string;
+			var file_name string;
+			err := rows.Scan(&video_id, &title, &description, &file_name)
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			log.Println("Video ID:", video_id)
+			log.Println("Video title:", title)
+			log.Println("Video description:", description)
+			log.Println("Video file_name:", file_name)
+		}
+
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	
 }
 
 var validPath = regexp.MustCompile("^/(upload)/([a-zA-Z0-9]+)$")
@@ -205,8 +248,11 @@ func initServer() {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	p := "./client/index.html"
-	http.ServeFile(w, r, p)
+	if r.Method == "GET" {
+		log.Println("Get request on the home endpoint :)")
+		p := "./client/index.html"
+		http.ServeFile(w, r, p)
+	}
 }
 
 func main() {
