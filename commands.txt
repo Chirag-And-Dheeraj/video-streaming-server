@@ -1,1 +1,0 @@
-cls && rd /s/q video && rd /s/q segments && mkdir video && mkdir segments  && go run main.go
