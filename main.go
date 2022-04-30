@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,6 +17,15 @@ import (
 	"time"
 	"video-streaming-server/database"
 )
+
+
+type video struct {
+	ID int `json:"id"`
+	Title string `json:"title"`
+	Description string `json:"description"`
+	File_name string `json:"file_name"`
+}
+
 
 func loadEnvVars() {
 	log.Println("Setting environment variables...")
@@ -205,25 +215,41 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		log.Println("Query executed.")
 		log.Println("Now printing results...")
 
+		records := make([]video,0)
+		
 		for rows.Next() {
-			var video_id int;
+			var id int;
 			var title string;
 			var description string;
 			var file_name string;
-			err := rows.Scan(&video_id, &title, &description, &file_name)
+			err := rows.Scan(&id, &title, &description, &file_name)
 
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			log.Println("Video ID:", video_id)
-			log.Println("Video title:", title)
-			log.Println("Video description:", description)
-			log.Println("Video file_name:", file_name)
+			// log.Println("Video ID:", id)
+			// log.Println("Video title:", title)
+			// log.Println("Video description:", description)
+			// log.Println("Video file_name:", file_name)
+
+			record := video {
+				ID: id,
+				Title: title,
+				Description: description,
+				File_name: file_name}
+
+			// log.Println("Record from struct:", record)
+			
+			records = append(records, record)
 		}
+		recordsJSON, err := json.Marshal(records)
 
 		if err != nil {
 			log.Fatal(err)
+		} else {
+			log.Println("Records in JSON", string(recordsJSON))
+			fmt.Fprintf(w, string(recordsJSON))
 		}
 	}
 	
