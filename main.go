@@ -26,6 +26,18 @@ type video struct {
 	File_name string `json:"file_name"`
 }
 
+func closeVideoFile(tmpFile *os.File) {
+	err := tmpFile.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	// log.Println(tmpFile.Name())
+	err = os.Remove(tmpFile.Name())
+	if err != nil {
+		log.Fatal(err)
+	}
+}
 
 func loadEnvVars() {
 	log.Println("Setting environment variables...")
@@ -59,7 +71,7 @@ func breakFile (videoPath string, fileName string) bool {
 		log.Fatal(err)
 	}
 
-	cmd := exec.Command("ffmpeg", "-y" , "-i" , videoPath, "-codec", "copy", "-map", "0","-f", "segment", "-segment_time", "10", "-segment_format", "mpegts", "-segment_list", "D:\\ideas\\video-streaming-server\\segments\\" + fileName + "\\" + fileName + ".m3u8", "-segment_list_type", "m3u8", "D:\\ideas\\video-streaming-server\\segments\\"  + fileName + "\\" + fileName + "_" + "segment_no_%d.ts")
+	cmd := exec.Command("ffmpeg", "-y" , "-i" , videoPath, "-codec", "copy", "-map", "0","-f", "segment", "-segment_time", "10", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH") + "\\segments\\" + fileName + "\\" + fileName + ".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH") + "\\segments\\"  + fileName + "\\" + fileName + "_" + "segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
 	
@@ -69,6 +81,49 @@ func breakFile (videoPath string, fileName string) bool {
 		return false
 	} else {
 		return true
+	}
+}
+
+func uploadToDeta(fileName string) {
+	files, err := ioutil.ReadDir(fmt.Sprintf("segments/%s", fileName))
+			
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("Now uploading chunks of " + fileName + " to Deta Drive...")
+	var count int = -1
+	for idx , file := range files {
+		fileBytes, err := ioutil.ReadFile(fmt.Sprintf("segments/%s/%s", fileName, file.Name()))
+		if err != nil {
+			log.Fatal(err)
+		}
+		postBody := bytes.NewBuffer(fileBytes)
+		uploadChunk := fmt.Sprintf("https://drive.deta.sh/v1/"+ os.Getenv("PROJECT_ID") + "/video-streaming-server/files?name=%s/%s", fileName, file.Name())
+
+		request, err := http.NewRequest("POST", uploadChunk, postBody)
+		request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
+
+		client := &http.Client{}
+
+		response, err := client.Do(request)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		count = idx
+		err = os.Remove("segments/" + fileName + "/" + file.Name())
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer response.Body.Close()
+	}
+
+	if count == len(files) - 1 {
+		err = os.Remove("segments/" + fileName)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -114,10 +169,10 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		d, _ := ioutil.ReadAll(r.Body)
 		tmpFile, _ := os.OpenFile("./video/"+fileName, os.O_APPEND|os.O_CREATE, 0644)
 		tmpFile.Write(d)
+		defer tmpFile.Close()
 		
 		// fmt.Fprintf(w, "Received chunk!")
-		defer tmpFile.Close()
-
+		
 		fileInfo, _ := tmpFile.Stat()
 		
 		// log.Println(fileInfo.Size())
@@ -127,44 +182,17 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			fmt.Fprintf(w, "\nFile received completely!!")
 			log.Println("Received all chunks for: " + fileName)
 			log.Println("Breaking the video into .ts files.")
-
+			
 			breakResult := breakFile(("./video/"+fileName), fileName)
-
+			
 			if breakResult {
 				log.Println("Successfully broken " + fileName + " into .ts files.")
 			} else {
 				log.Println("Error breaking " + fileName + " into .ts files.")
 			}
 			
-			files, err := ioutil.ReadDir(fmt.Sprintf("segments/%s", fileName))
-			
-			if err != nil {
-				log.Fatal(err)
-			}
+			uploadToDeta(fileName)
 
-			log.Println("Now uploading chunks of " + fileName + " to Deta Drive...")
-
-			for _ , file := range files {
-				fileBytes, err := ioutil.ReadFile(fmt.Sprintf("segments/%s/%s", fileName, file.Name()))
-				if err != nil {
-					log.Fatal(err)
-				}
-				postBody := bytes.NewBuffer(fileBytes)
-				uploadChunk := fmt.Sprintf("https://drive.deta.sh/v1/"+ os.Getenv("PROJECT_ID") + "/video-streaming-server/files?name=%s/%s", fileName, file.Name())
-
-				request, err := http.NewRequest("POST", uploadChunk, postBody)
-				request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
-
-				client := &http.Client{}
-
-				response, err := client.Do(request)
-
-				if err != nil {
-					log.Fatal(err)
-				}
-				// log.Println("Chunk number", i, "uploaded successfully.")
-				defer response.Body.Close()
-			}
 			log.Println("Successfully uploaded chunks of", fileName, "to Deta Drive")
 			log.Println("Updating upload status in database record...")
 			updateStatement, err := db.Prepare(`
@@ -173,14 +201,14 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			SET 
 				upload_status=?,
 				upload_end_time=?
-			WHERE
+				WHERE
 				file_name=?;
 			`)
-
+			
 			if err != nil {
 				log.Fatal(err)
 			}
-
+			
 			result, err := updateStatement.Exec(1, time.Now(), fileName)
 
 			if err != nil {
@@ -190,20 +218,19 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				log.Print("Database record updated.")
 				log.Println("Finished uploading", fileName, " :)")
 			}
-
-	}
+		}
 	// log.Println("---------------------------------------------------------------------")
 	} else if r.Method == "GET" {
 		log.Println("Get request on the video endpoint :)")
 		log.Println("Querying the database now for a list of videos...")
 		rows, err := db.Query(`
-			SELECT 
+		SELECT 
 				video_id,
 				title,
 				description,
 				file_name
 			FROM
-				videos; 
+				videos;
 		`)
 
 		if err != nil {
@@ -215,7 +242,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		log.Println("Query executed.")
 		log.Println("Now printing results...")
 
-		records := make([]video,0)
+		records := make([]video, 0)
 		
 		for rows.Next() {
 			var id int;
@@ -237,7 +264,8 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				ID: id,
 				Title: title,
 				Description: description,
-				File_name: file_name}
+				File_name: file_name,
+			}
 
 			// log.Println("Record from struct:", record)
 			
@@ -252,7 +280,6 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			fmt.Fprintf(w, string(recordsJSON))
 		}
 	}
-	
 }
 
 var validPath = regexp.MustCompile("^/(upload)/([a-zA-Z0-9]+)$")
@@ -296,11 +323,26 @@ func setUpRoutes(db *sql.DB) {
 	log.Println("Routes set.")
 }
 
+func resumeUploadIfAny() {
+	folders, err := ioutil.ReadDir("segments")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, folder := range folders {
+		uploadToDeta(folder.Name())
+	}
+}
+
 func initServer() {
 	log.Println("Initializing server...")
 	loadEnvVars()
 	db := database.Connect()
 	setUpRoutes(db)
+
+	// For resuming upload if any chunk remains to get uploaded to deta
+	resumeUploadIfAny()
 }
 
 func main() {
