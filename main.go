@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha1"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -20,10 +21,9 @@ import (
 )
 
 type video struct {
-	ID          int    `json:"id"`
+	ID          string    `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	File_name   string `json:"file_name"`
 }
 
 func closeVideoFile(tmpFile *os.File) {
@@ -150,6 +150,14 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		isFirstChunk := r.Header.Get("first-chunk")
 		fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
 
+		hashChecksum := sha1.New()
+
+		hashChecksum.Write([]byte(fileName))
+
+		fileNameHash := fmt.Sprintf("%x", hashChecksum.Sum(nil))
+
+		serverFileName := fileNameHash+".mp4"
+
 		if isFirstChunk == "true" {
 			title := r.Header.Get("title")
 			description := r.Header.Get("description")
@@ -157,22 +165,28 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Println("Size of the file received:", fileSize)
 			log.Println("Title: ", title)
 			log.Println("Description: ", description)
+			log.Println("FileName hash: " + fileNameHash)
 			log.Println("Creating a database record...")
 
-			insertStatement, err := db.Prepare(`INSERT INTO videos
-			(
-				file_name,
-				title,
-				description,
-				upload_initiate_time,
-				upload_status
-			) VALUES (?,?,?,?,?);`)
+			insertStatement, err := db.Prepare(`
+				INSERT INTO 
+					videos
+						(
+							video_id,
+							title,
+							description,
+							upload_initiate_time,
+							upload_status
+						) 
+					VALUES 
+						(?,?,?,?,?);
+			`)
 
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0)
+			_, err = insertStatement.Exec(fileNameHash, title, description, time.Now(), 0)
 
 			if err != nil {
 				log.Fatal(err)
@@ -183,7 +197,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		}
 
 		d, _ := ioutil.ReadAll(r.Body)
-		tmpFile, _ := os.OpenFile("./video/"+fileName, os.O_APPEND|os.O_CREATE, 0644)
+		tmpFile, _ := os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_CREATE, 0644)
 		tmpFile.Write(d)
 		defer tmpFile.Close()
 
@@ -191,10 +205,10 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 		if fileInfo.Size() == int64(fileSize) {
 			fmt.Fprintf(w, "\nFile received completely!!")
-			log.Println("Received all chunks for: " + fileName)
+			log.Println("Received all chunks for: " + serverFileName)
 			log.Println("Breaking the video into .ts files.")
 
-			breakResult := breakFile(("./video/" + fileName), fileName)
+			breakResult := breakFile(("./video/" + serverFileName), strings.Split(serverFileName, ".")[0])
 
 			if breakResult {
 				log.Println("Successfully broken " + fileName + " into .ts files.")
@@ -202,7 +216,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				log.Println("Error breaking " + fileName + " into .ts files.")
 			}
 
-			uploadToDeta(fileName)
+			uploadToDeta(strings.Split(serverFileName, ".")[0])
 
 			log.Println("Successfully uploaded chunks of", fileName, "to Deta Drive")
 			log.Println("Updating upload status in database record...")
@@ -213,14 +227,14 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				upload_status=?,
 				upload_end_time=?
 				WHERE
-				file_name=?;
+				video_id=?;
 			`)
 
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			_, err = updateStatement.Exec(1, time.Now(), fileName)
+			_, err = updateStatement.Exec(1, time.Now(), fileNameHash)
 
 			if err != nil {
 				log.Fatal(err)
@@ -236,8 +250,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			SELECT 
 				video_id,
 				title,
-				description,
-				file_name
+				description
 			FROM
 				videos;
 		`)
@@ -254,11 +267,11 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		records := make([]video, 0)
 
 		for rows.Next() {
-			var id int
+			var id string
 			var title string
 			var description string
-			var file_name string
-			err := rows.Scan(&id, &title, &description, &file_name)
+
+			err := rows.Scan(&id, &title, &description)
 
 			if err != nil {
 				log.Fatal(err)
@@ -268,7 +281,6 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				ID:          id,
 				Title:       title,
 				Description: description,
-				File_name:   file_name,
 			}
 
 			records = append(records, record)
@@ -289,24 +301,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 		if params.Has("v") {
 			v := params.Get("v")
-
-			stmt, err := db.Prepare(`
-				SELECT 
-					manifest_url 
-				FROM 
-					videos 
-				WHERE 
-					video_id=?
-			`)
-
-			var manifest_url string
-			err = stmt.QueryRow(v).Scan(&manifest_url)
-
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			log.Println(manifest_url)
+			log.Println("Got parameter v = " + v)
 		}
 	}
 }
