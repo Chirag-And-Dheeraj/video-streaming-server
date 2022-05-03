@@ -119,11 +119,11 @@ func uploadToDeta(fileName string) {
 		client := &http.Client{}
 
 		response, err := client.Do(request)
-		defer response.Body.Close()
-
 		if err != nil {
 			log.Fatal(err)
 		}
+		defer response.Body.Close()
+
 
 		if response.StatusCode != 201 {
 			log.Fatal(response.StatusCode)
@@ -172,12 +172,11 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				log.Fatal(err)
 			}
 
-			result, err := insertStatement.Exec(fileName, title, description, time.Now(), 0)
+			_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0)
 
 			if err != nil {
 				log.Fatal(err)
 			} else {
-				log.Println(result)
 				log.Print("Database record created.")
 			}
 
@@ -221,21 +220,20 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				log.Fatal(err)
 			}
 
-			result, err := updateStatement.Exec(1, time.Now(), fileName)
+			_, err = updateStatement.Exec(1, time.Now(), fileName)
 
 			if err != nil {
 				log.Fatal(err)
 			} else {
-				log.Println(result)
 				log.Print("Database record updated.")
 				log.Println("Finished uploading", fileName, " :)")
 			}
 		}
-	} else if r.Method == "GET" {
+	} else if r.Method == "GET" && len(r.URL.Query()) == 0 {
 		log.Println("Get request on the video endpoint :)")
 		log.Println("Querying the database now for a list of videos...")
 		rows, err := db.Query(`
-		SELECT 
+			SELECT 
 				video_id,
 				title,
 				description,
@@ -283,6 +281,32 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		} else {
 			log.Println("Records in JSON", string(recordsJSON))
 			fmt.Fprintf(w, string(recordsJSON))
+		}
+	} else if r.Method == "GET" && len(r.URL.Query()) != 0 {
+		log.Println("Bring me videoooooo....")
+		
+		params := r.URL.Query()
+
+		if params.Has("v") {
+			v := params.Get("v")
+
+			stmt, err := db.Prepare(`
+				SELECT 
+					manifest_url 
+				FROM 
+					videos 
+				WHERE 
+					video_id=?
+			`)
+
+			var manifest_url string
+			err = stmt.QueryRow(v).Scan(&manifest_url)
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			log.Println(manifest_url)
 		}
 	}
 }
