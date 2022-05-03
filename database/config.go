@@ -17,15 +17,14 @@ func Connect() *sql.DB {
 
 	table, err := db.Prepare(`CREATE TABLE IF NOT EXISTS videos
 	(
-		video_id INTEGER PRIMARY KEY AUTOINCREMENT,
-		file_name TEXT,
+		video_id TEXT PRIMARY KEY,
 		title TEXT,
 		description TEXT,
 		upload_initiate_time TEXT,
 		upload_status INTEGER,
-		upload_end_time TEXT,
-		manifest_url TEXT
+		upload_end_time TEXT
 	)`)
+
 
 	if err != nil {
 		log.Fatal(err)
