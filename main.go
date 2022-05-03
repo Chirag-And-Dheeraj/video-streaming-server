@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -298,10 +299,30 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		log.Println("Bring me videoooooo....")
 		
 		params := r.URL.Query()
-
+		
 		if params.Has("v") {
 			v := params.Get("v")
 			log.Println("Got parameter v = " + v)
+
+			getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + v + "/" + v + ".m3u8"
+
+			request, err := http.NewRequest("GET", getManifestFile, nil)
+			request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
+
+			client := &http.Client{}
+
+			response, err := client.Do(request)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer response.Body.Close()
+
+			bodyBytes, err := io.ReadAll(response.Body)
+    		if err != nil {
+        		log.Fatal(err)
+    		}
+
+			w.Write(bodyBytes)
 		}
 	}
 }
