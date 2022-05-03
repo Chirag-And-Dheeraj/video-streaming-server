@@ -92,6 +92,14 @@ func uploadToDeta(fileName string) {
 		log.Fatal(err)
 	}
 
+	if len(files) == 0 {
+		err = os.Remove("segments/" + fileName)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
 	log.Println("Now uploading chunks of " + fileName + " to Deta Drive...")
 	var count int = -1
 	for idx, file := range files {
@@ -127,8 +135,6 @@ func uploadToDeta(fileName string) {
 			}
 		}
 	}
-
-	resumeUploadIfAny()
 
 	if count == len(files)-1 {
 		err = os.Remove("segments/" + fileName)
@@ -339,11 +345,11 @@ func initServer() {
 	loadEnvVars()
 	db := database.Connect()
 	setUpRoutes(db)
-	resumeUploadIfAny()
 }
 
 func main() {
 	initServer()
 	log.Println("Server is running on http://127.0.0.1:8000")
 	log.Fatal(http.ListenAndServe("127.0.0.1:8000", nil))
+	resumeUploadIfAny()
 }
