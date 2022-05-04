@@ -111,7 +111,7 @@ func uploadToDeta(fileName string) {
 		}
 
 		postBody := bytes.NewBuffer(fileBytes)
-		param := url.QueryEscape(fileName + "/" + file.Name())
+		param := url.QueryEscape(file.Name())
 		uploadRequestURL := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files?name=" + param
 
 		request, err := http.NewRequest("POST", uploadRequestURL, postBody)
@@ -244,7 +244,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				log.Println("Finished uploading", fileName, " :)")
 			}
 		}
-	} else if r.Method == "GET" && len(r.URL.Query()) == 0 {
+	} else if r.Method == "GET" && len(strings.Split(r.URL.Path[1:], "/")) == 1 {
 		log.Println("Get request on the video endpoint :)")
 		log.Println("Querying the database now for a list of videos...")
 		rows, err := db.Query(`
@@ -295,35 +295,58 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Println("Records in JSON", string(recordsJSON))
 			fmt.Fprintf(w, string(recordsJSON))
 		}
-	} else if r.Method == "GET" && len(r.URL.Query()) != 0 {
+	} else if r.Method == "GET" && len(strings.Split(r.URL.Path[1:], "/")) == 2 {
 		log.Println("Bring me videoooooo....")
 		
-		params := r.URL.Query()
+		video_id := strings.Split(r.URL.Path[1:], "/")[1]
 		
-		if params.Has("v") {
-			v := params.Get("v")
-			log.Println("Got parameter v = " + v)
+		log.Println("Video ID: " + video_id)
 
-			getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + v + "/" + v + ".m3u8"
+		getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + video_id + ".m3u8"
 
-			request, err := http.NewRequest("GET", getManifestFile, nil)
-			request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
+		request, err := http.NewRequest("GET", getManifestFile, nil)
+		request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
 
-			client := &http.Client{}
+		client := &http.Client{}
 
-			response, err := client.Do(request)
-			if err != nil {
-				log.Fatal(err)
-			}
-			defer response.Body.Close()
-
-			bodyBytes, err := io.ReadAll(response.Body)
-    		if err != nil {
-        		log.Fatal(err)
-    		}
-
-			w.Write(bodyBytes)
+		response, err := client.Do(request)
+		if err != nil {
+			log.Fatal(err)
 		}
+		defer response.Body.Close()
+
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		w.Write(bodyBytes)
+	} else if r.Method == "GET" && len(strings.Split(r.URL.Path[1:], "/")) == 3 {
+		log.Println("Bring me videoooooo.... ka chunk chaiye, milega?")
+		
+		videoChunkFileName := strings.Split(r.URL.Path[1:], "/")[2]
+		
+		log.Println("Video chunk requested: " + videoChunkFileName)
+
+		getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + videoChunkFileName
+
+		request, err := http.NewRequest("GET", getManifestFile, nil)
+		request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
+
+		client := &http.Client{}
+
+		response, err := client.Do(request)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer response.Body.Close()
+
+		bodyBytes, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		w.Write(bodyBytes)
 	}
 }
 
@@ -372,10 +395,16 @@ func setUpRoutes(db *sql.DB) {
 	log.Println("Setting up routes...")
 	http.HandleFunc("/", homePageHandler)
 	http.HandleFunc("/upload", uploadPageHandler)
-	http.HandleFunc("/view", viewPageHandler)
-	http.HandleFunc("/video", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/list", viewPageHandler)
+	http.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
 	})
+
+// /video ==> Get all videos? Why?
+// /video/weufhewifhw ==> Get manifest of weufhewifhw
+// /video/weufhewifhw/weufhewifhw_1_.ts
+
+
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Routes set.")
 }
@@ -385,6 +414,8 @@ func initServer() {
 	loadEnvVars()
 	db := database.Connect()
 	setUpRoutes(db)
+
+	
 }
 
 func main() {
