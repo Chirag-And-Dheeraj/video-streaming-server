@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@200&family=Megrim&family=Mystery+Quest&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../static/style.css" />
+    <title>Room of Requirement: Your very own - Large File Storage</title>
+  </head>
+  <body>
+    <header>
+      <a href="/"><h1>Room of Requirement</h1></a>
+      <nav>
+        <ul>
+          <li><a class="special-blue" href="/upload">Upload</a></li>
+          <li><a class="special-red" href="/list">List Files</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main>
+      <h1 class="page-title special-blue">View Video</h1>
+      <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+      <!-- Or if you want a more recent canary version -->
+      <!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
+      <video id="video" autoplay="true" muted="muted" controls></video>
+      <script>
+        var video = document.getElementById("video");
+        if (Hls.isSupported()) {
+          var hls = new Hls();
+          hls.loadSource(
+            "http://127.0.0.1:8000/video/6e1078087cb4f8037da46e0604091158c7b8d461/"
+          );
+          hls.attachMedia(video);
+          hls.on(Hls.Events.MANIFEST_PARSED, function () {
+            // video.play();
+          });
+        } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          video.src =
+            "http://127.0.0.1:8000/video/6e1078087cb4f8037da46e0604091158c7b8d461/";
+          video.addEventListener("loadedmetadata", function () {
+            // video.play();
+          });
+        }
+      </script>
+    </main>
+    <!-- <script src="../static/view.js"></script> -->
+  </body>
+</html>
