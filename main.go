@@ -22,7 +22,7 @@ import (
 )
 
 type video struct {
-	ID          string    `json:"id"`
+	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 }
@@ -35,7 +35,7 @@ func closeVideoFile(tmpFile *os.File) {
 	}
 
 	err = os.Remove(tmpFile.Name())
-	
+
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -125,7 +125,6 @@ func uploadToDeta(fileName string) {
 		}
 		defer response.Body.Close()
 
-
 		if response.StatusCode != 201 {
 			log.Fatal(response.StatusCode)
 		} else {
@@ -146,6 +145,7 @@ func uploadToDeta(fileName string) {
 }
 
 func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	log.Println(r.URL)
 	if r.Method == "POST" {
 		fileName := r.Header.Get("file-name")
 		isFirstChunk := r.Header.Get("first-chunk")
@@ -157,7 +157,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 		fileNameHash := fmt.Sprintf("%x", hashChecksum.Sum(nil))
 
-		serverFileName := fileNameHash+".mp4"
+		serverFileName := fileNameHash + ".mp4"
 
 		if isFirstChunk == "true" {
 			title := r.Header.Get("title")
@@ -244,10 +244,15 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				log.Println("Finished uploading", fileName, " :)")
 			}
 		}
-	} else if r.Method == "GET" && len(strings.Split(r.URL.Path[1:], "/")) == 1 {
+	} else if r.Method == "GET" {
 		log.Println("Get request on the video endpoint :)")
-		log.Println("Querying the database now for a list of videos...")
-		rows, err := db.Query(`
+		log.Println("Analysing the API call...")
+		urlPathLevels := strings.Split(r.URL.Path[1:], "/")
+		log.Println("URL path levels: ", urlPathLevels)
+
+		if urlPathLevels[1] == "" {
+			log.Println("Querying the database now for a list of videos...")
+			rows, err := db.Query(`
 			SELECT 
 				video_id,
 				title,
@@ -256,97 +261,99 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				videos;
 		`)
 
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		defer rows.Close()
-
-		log.Println("Query executed.")
-		log.Println("Now printing results...")
-
-		records := make([]video, 0)
-
-		for rows.Next() {
-			var id string
-			var title string
-			var description string
-
-			err := rows.Scan(&id, &title, &description)
-
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			record := video{
-				ID:          id,
-				Title:       title,
-				Description: description,
+			defer rows.Close()
+
+			log.Println("Query executed.")
+			log.Println("Now printing results...")
+
+			records := make([]video, 0)
+
+			for rows.Next() {
+				var id string
+				var title string
+				var description string
+
+				err := rows.Scan(&id, &title, &description)
+
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				record := video{
+					ID:          id,
+					Title:       title,
+					Description: description,
+				}
+
+				records = append(records, record)
 			}
 
-			records = append(records, record)
+			recordsJSON, err := json.Marshal(records)
+
+			if err != nil {
+				log.Fatal(err)
+			} else {
+				log.Println("Records in JSON", string(recordsJSON))
+				fmt.Fprintf(w, string(recordsJSON))
+			}
+		} else if urlPathLevels[2] == "" {
+			log.Println("Bring me videoooooo....")
+
+			video_id := strings.Split(r.URL.Path[1:], "/")[1]
+
+			log.Println("Video ID: " + video_id)
+
+			getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + video_id + ".m3u8"
+
+			request, err := http.NewRequest("GET", getManifestFile, nil)
+			request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
+
+			client := &http.Client{}
+
+			response, err := client.Do(request)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer response.Body.Close()
+
+			bodyBytes, err := io.ReadAll(response.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			w.Header().Set("Content-Type", "application/x-mpegURL")
+			w.Write(bodyBytes)
+		} else if urlPathLevels[2] != "" {
+			log.Println("Bring me videoooooo.... ka chunk chaiye, milega?")
+
+			videoChunkFileName := strings.Split(r.URL.Path[1:], "/")[2]
+
+			log.Println("Video chunk requested: " + videoChunkFileName)
+
+			getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + videoChunkFileName
+
+			request, err := http.NewRequest("GET", getManifestFile, nil)
+			request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
+
+			client := &http.Client{}
+
+			response, err := client.Do(request)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer response.Body.Close()
+
+			bodyBytes, err := io.ReadAll(response.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			w.Header().Set("Content-Type", "video/MP2T")
+			w.Write(bodyBytes)
 		}
-		
-		recordsJSON, err := json.Marshal(records)
 
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			log.Println("Records in JSON", string(recordsJSON))
-			fmt.Fprintf(w, string(recordsJSON))
-		}
-	} else if r.Method == "GET" && len(strings.Split(r.URL.Path[1:], "/")) == 2 {
-		log.Println("Bring me videoooooo....")
-		
-		video_id := strings.Split(r.URL.Path[1:], "/")[1]
-		
-		log.Println("Video ID: " + video_id)
-
-		getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + video_id + ".m3u8"
-
-		request, err := http.NewRequest("GET", getManifestFile, nil)
-		request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
-
-		client := &http.Client{}
-
-		response, err := client.Do(request)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer response.Body.Close()
-
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		w.Write(bodyBytes)
-	} else if r.Method == "GET" && len(strings.Split(r.URL.Path[1:], "/")) == 3 {
-		log.Println("Bring me videoooooo.... ka chunk chaiye, milega?")
-		
-		videoChunkFileName := strings.Split(r.URL.Path[1:], "/")[2]
-		
-		log.Println("Video chunk requested: " + videoChunkFileName)
-
-		getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + videoChunkFileName
-
-		request, err := http.NewRequest("GET", getManifestFile, nil)
-		request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
-
-		client := &http.Client{}
-
-		response, err := client.Do(request)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer response.Body.Close()
-
-		bodyBytes, err := io.ReadAll(response.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		w.Write(bodyBytes)
 	}
 }
 
@@ -383,10 +390,18 @@ func uploadPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func listPageHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		log.Println("Get request on the view videos endpoint :)")
+		p := "./client/list.html"
+		http.ServeFile(w, r, p)
+	}
+}
+
 func viewPageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		log.Println("Get request on the view videos endpoint :)")
-		p := "./client/view.html"
+		p := "./client/video.html"
 		http.ServeFile(w, r, p)
 	}
 }
@@ -395,15 +410,15 @@ func setUpRoutes(db *sql.DB) {
 	log.Println("Setting up routes...")
 	http.HandleFunc("/", homePageHandler)
 	http.HandleFunc("/upload", uploadPageHandler)
-	http.HandleFunc("/list", viewPageHandler)
+	http.HandleFunc("/list", listPageHandler)
+	http.HandleFunc("/view", viewPageHandler)
 	http.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
 	})
 
-// /video ==> Get all videos? Why?
-// /video/weufhewifhw ==> Get manifest of weufhewifhw
-// /video/weufhewifhw/weufhewifhw_1_.ts
-
+	// /video ==> Get all videos? Why?
+	// /video/weufhewifhw ==> Get manifest of weufhewifhw
+	// /video/weufhewifhw/weufhewifhw_1_.ts
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Routes set.")
@@ -415,7 +430,6 @@ func initServer() {
 	db := database.Connect()
 	setUpRoutes(db)
 
-	
 }
 
 func main() {
