@@ -24,30 +24,10 @@
       </nav>
     </header>
     <main>
-      <h1 class="page-title special-red">Upload</h1>
-      <section id="file-form">
-        <label class="" for="title">Title</label>
-        <input
-          id="title"
-          type="text"
-          name="title"
-          placeholder="The Fast and The Furious"
-        />
-        <label class="block" for="description">Description</label>
-        <textarea
-          id="description"
-          type="text"
-          name="description"
-          placeholder="A movie about car racing."
-        ></textarea>
-        <label class="" for="file">Drop that video...</label>
-        <input id="video" type="file" name="video" accept="video/mp4" />
-        <br />
-        <button id="uploadVideoButton">Submit</button>
-
-        <div id="divOutput"></div>
-      </section>
+      <h1 class="page-title special-blue">View Video</h1>
+      <video id="video" autoplay="true" muted="muted" controls width="500"></video>
     </main>
-    <script src="../static/upload.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="../static/watch.js"></script>
   </body>
 </html>
