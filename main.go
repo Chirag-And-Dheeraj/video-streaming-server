@@ -145,7 +145,6 @@ func uploadToDeta(fileName string) {
 }
 
 func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	log.Println(r.URL)
 	if r.Method == "POST" {
 		fileName := r.Header.Get("file-name")
 		isFirstChunk := r.Header.Get("first-chunk")
@@ -268,7 +267,6 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			defer rows.Close()
 
 			log.Println("Query executed.")
-			log.Println("Now printing results...")
 
 			records := make([]video, 0)
 
@@ -297,7 +295,6 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			if err != nil {
 				log.Fatal(err)
 			} else {
-				log.Println("Records in JSON", string(recordsJSON))
 				fmt.Fprintf(w, string(recordsJSON))
 			}
 		} else if urlPathLevels[2] == "" {
@@ -398,10 +395,10 @@ func listPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func viewPageHandler(w http.ResponseWriter, r *http.Request) {
+func watchPageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		log.Println("Get request on the view videos endpoint :)")
-		p := "./client/video.html"
+		log.Println("Get request on the watch videos endpoint :)")
+		p := "./client/watch.html"
 		http.ServeFile(w, r, p)
 	}
 }
@@ -411,7 +408,7 @@ func setUpRoutes(db *sql.DB) {
 	http.HandleFunc("/", homePageHandler)
 	http.HandleFunc("/upload", uploadPageHandler)
 	http.HandleFunc("/list", listPageHandler)
-	http.HandleFunc("/view", viewPageHandler)
+	http.HandleFunc("/watch", watchPageHandler)
 	http.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
 	})
