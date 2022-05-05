@@ -73,7 +73,7 @@ func breakFile(videoPath string, fileName string) bool {
 		log.Fatal(err)
 	}
 
-	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-codec", "copy", "-map", "0", "-f", "segment", "-segment_time", "10", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"\\segments\\"+fileName+"\\"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"\\segments\\"+fileName+"\\"+fileName+"_"+"segment_no_%d.ts")
+	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-codec", "copy", "-map", "0", "-f", "segment", "-segment_time", "7", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"\\segments\\"+fileName+"\\"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"\\segments\\"+fileName+"\\"+fileName+"_"+"segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
 
@@ -193,17 +193,18 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			} else {
 				log.Print("Database record created.")
 			}
-
+			log.Println("First chunk received")
 		}
-
+		log.Println("Outside first chunk")
 		d, _ := ioutil.ReadAll(r.Body)
+		log.Println("Body read")
 		tmpFile, _ := os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_CREATE, 0644)
 		tmpFile.Write(d)
-		defer tmpFile.Close()
 
 		fileInfo, _ := tmpFile.Stat()
 
 		if fileInfo.Size() == int64(fileSize) {
+			defer closeVideoFile(tmpFile)
 			fmt.Fprintf(w, "\nFile received completely!!")
 			log.Println("Received all chunks for: " + serverFileName)
 			log.Println("Breaking the video into .ts files.")
@@ -215,7 +216,6 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			} else {
 				log.Println("Error breaking " + fileName + " into .ts files.")
 			}
-
 			uploadToDeta(strings.Split(serverFileName, ".")[0])
 
 			log.Println("Successfully uploaded chunks of", fileName, "to Deta Drive")
@@ -412,11 +412,6 @@ func setUpRoutes(db *sql.DB) {
 	http.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
 	})
-
-	// /video ==> Get all videos? Why?
-	// /video/weufhewifhw ==> Get manifest of weufhewifhw
-	// /video/weufhewifhw/weufhewifhw_1_.ts
-
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Routes set.")
 }
@@ -426,12 +421,11 @@ func initServer() {
 	loadEnvVars()
 	db := database.Connect()
 	setUpRoutes(db)
-
+	resumeUploadIfAny()
 }
 
 func main() {
 	initServer()
 	log.Println("Server is running on http://127.0.0.1:8000")
 	log.Fatal(http.ListenAndServe("127.0.0.1:8000", nil))
-	resumeUploadIfAny()
 }

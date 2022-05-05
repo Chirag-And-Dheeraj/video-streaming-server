@@ -1,8 +1,9 @@
-let uploadVideoButton = document.getElementById("uploadVideoButton");
-let divOutput = document.getElementById("divOutput");
-let video = document.getElementById("video");
-let title = document.getElementById("title");
-let description = document.getElementById("description");
+const uploadVideoButton = document.getElementById("uploadVideoButton");
+const divOutput = document.getElementById("divOutput");
+const video = document.getElementById("video");
+const title = document.getElementById("title");
+const description = document.getElementById("description");
+// const thumbnail = document.getElementById("thumbnail");
 
 function make_id(length) {
   var result = "";
@@ -71,4 +72,10 @@ uploadVideoButton.addEventListener("click", () => {
   };
 
   fileReader.readAsArrayBuffer(theFile);
+
+  // const thumbnailReader = new FileReader();
+
+  // thumbnailReader.onload = async
+
+  // thumbnailReader.readAsDataURL(thumbnail.files[0]);
 });
