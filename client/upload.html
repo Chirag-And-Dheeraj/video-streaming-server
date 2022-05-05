@@ -26,7 +26,7 @@
     <main>
       <h1 class="page-title special-red">Upload</h1>
       <section id="file-form">
-        <label class="" for="title">Title</label>
+        <label for="title">Title</label>
         <input
           id="title"
           type="text"
@@ -40,9 +40,13 @@
           name="description"
           placeholder="A movie about car racing."
         ></textarea>
-        <label class="" for="file">Drop that video...</label>
-        <input id="video" type="file" name="video" accept="video/mp4" />
+        <label for="video">Drop that video...</label>
+        <input id="video" type="file" name="video" accept="video/*" />
         <br />
+
+        <!-- <label for="thumbnail">Thumbnail</label>
+        <input id="thumbnail" type="file" name="thumbnail" accept="image/*" /> -->
+        <br>
         <button id="uploadVideoButton">Submit</button>
 
         <div id="divOutput"></div>
