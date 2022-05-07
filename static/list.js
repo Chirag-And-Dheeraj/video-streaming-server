@@ -1,5 +1,5 @@
 window.onload = async () => {
-  console.log("Page loaded, bitch...");
+  console.log("Page loaded,...");
   const response = await fetch("http://127.0.0.1:8000/video", {
     method: "GET",
   });
@@ -18,7 +18,10 @@ window.onload = async () => {
     let videoTitleText = document.createTextNode(videos[i].title);
     let videoDescriptionText = document.createTextNode(videos[i].description);
 
-    videoLink.setAttribute("href", `http://127.0.0.1:8000/watch?v=${videos[i].id}`);
+    videoLink.setAttribute(
+      "href",
+      `http://127.0.0.1:8000/watch?v=${videos[i].id}`
+    );
     videoLink.textContent = "Play";
 
     videoTitle.appendChild(videoTitleText);
