@@ -143,3 +143,8 @@ main section textarea,
 #uploadFileButton {
   cursor: pointer;
 }
+
+#video {
+  margin: 1.5em;
+}
+

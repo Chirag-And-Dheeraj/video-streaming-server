@@ -193,11 +193,9 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			} else {
 				log.Print("Database record created.")
 			}
-			log.Println("First chunk received")
 		}
-		log.Println("Outside first chunk")
 		d, _ := ioutil.ReadAll(r.Body)
-		log.Println("Body read")
+
 		tmpFile, _ := os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_CREATE, 0644)
 		tmpFile.Write(d)
 
@@ -239,16 +237,13 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			if err != nil {
 				log.Fatal(err)
 			} else {
-				log.Print("Database record updated.")
+				log.Println("Database record updated.")
 				log.Println("Finished uploading", fileName, " :)")
 			}
 		}
 	} else if r.Method == "GET" {
-		log.Println("Get request on the video endpoint :)")
-		log.Println("Analysing the API call...")
+		log.Println("GET: " + r.URL.Path)
 		urlPathLevels := strings.Split(r.URL.Path[1:], "/")
-		log.Println("URL path levels: ", urlPathLevels)
-
 		if urlPathLevels[1] == "" {
 			log.Println("Querying the database now for a list of videos...")
 			rows, err := db.Query(`
@@ -298,8 +293,6 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 				fmt.Fprintf(w, string(recordsJSON))
 			}
 		} else if urlPathLevels[2] == "" {
-			log.Println("Bring me videoooooo....")
-
 			video_id := strings.Split(r.URL.Path[1:], "/")[1]
 
 			log.Println("Video ID: " + video_id)
@@ -324,7 +317,6 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			w.Header().Set("Content-Type", "application/x-mpegURL")
 			w.Write(bodyBytes)
 		} else if urlPathLevels[2] != "" {
-			log.Println("Bring me videoooooo.... ka chunk chaiye, milega?")
 
 			videoChunkFileName := strings.Split(r.URL.Path[1:], "/")[2]
 
@@ -349,8 +341,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			}
 			w.Header().Set("Content-Type", "video/MP2T")
 			w.Write(bodyBytes)
-		}
-
+		} 
 	}
 }
 
@@ -373,15 +364,52 @@ func homePageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		return
 	} else if r.Method == "GET" {
-		log.Println("Get request on the home page endpoint :)")
+		log.Println("GET: " + r.URL.Path)
 		p := "./client/index.html"
 		http.ServeFile(w, r, p)
 	}
 }
 
+func videoDetailsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	if r.Method == "GET" {
+		log.Println("GET: " + r.URL.Path)
+		video_id := r.URL.Path[len("/video/details/"):]
+		log.Println("Details of " + video_id + " requested.")
+		detailsQuery, err := db.Prepare(`SELECT
+			title, description
+		FROM
+			videos
+		WHERE
+			video_id=?`)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer detailsQuery.Close()
+		var  title, description string
+		err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Println("Video ID: " + video_id)
+		log.Println("Title: " + title)
+		log.Println("Description: " + description)
+		videoDetails := &video{
+			ID : video_id,
+			Title : title,
+			Description : description}
+		videoDetailsJSON, err := json.Marshal(videoDetails)
+		
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Fprintf(w, string(videoDetailsJSON))		
+	}
+}
+
 func uploadPageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		log.Println("Get request on the upload page endpoint :)")
+		log.Println("GET: " + r.URL.Path)
 		p := "./client/upload.html"
 		http.ServeFile(w, r, p)
 	}
@@ -389,7 +417,7 @@ func uploadPageHandler(w http.ResponseWriter, r *http.Request) {
 
 func listPageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		log.Println("Get request on the view videos endpoint :)")
+		log.Println("GET: " + r.URL.Path)
 		p := "./client/list.html"
 		http.ServeFile(w, r, p)
 	}
@@ -397,7 +425,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request) {
 
 func watchPageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		log.Println("Get request on the watch videos endpoint :)")
+		log.Println("GET: " + r.URL.Path)
 		p := "./client/watch.html"
 		http.ServeFile(w, r, p)
 	}
@@ -411,6 +439,9 @@ func setUpRoutes(db *sql.DB) {
 	http.HandleFunc("/watch", watchPageHandler)
 	http.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
+	})
+	http.HandleFunc("/video/details/", func(w http.ResponseWriter, r *http.Request) {
+		videoDetailsHandler(w, r, db)
 	})
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Routes set.")
