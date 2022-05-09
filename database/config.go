@@ -29,7 +29,7 @@ func Connect() *sql.DB {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	defer table.Close()
 	table.Exec()
 
 	log.Println("Database initialized.")
