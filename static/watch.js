@@ -4,7 +4,7 @@ window.onload = async () => {
   const searchParams = new URLSearchParams(url.search);
   const v = searchParams.get("v");
 
-  let response = await fetch(`http://127.0.0.1:8000/video/details/${v}`);
+  let response = await fetch(`http://127.0.0.1:8000/video/${v}`);
   let videoDetails = await response.json();
 
   let title = document.getElementById("video_title");
@@ -18,7 +18,7 @@ window.onload = async () => {
 
   if (Hls.isSupported()) {
     var hls = new Hls();
-    hls.loadSource(`http://127.0.0.1:8000/video/${v}/`);
+    hls.loadSource(`http://127.0.0.1:8000/video/${v}/stream/`);
     hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED, function () {
       video.play();

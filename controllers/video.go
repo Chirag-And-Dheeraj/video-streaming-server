@@ -178,6 +178,43 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
+func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	video_id := r.URL.Path[len("/video/"):]
+	log.Println("Details of " + video_id + " requested.")
+	detailsQuery, err := db.Prepare(`
+		SELECT
+			title, description
+		FROM
+			videos
+		WHERE
+			video_id=?
+	`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer detailsQuery.Close()
+	var  title, description string
+	err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Video ID: " + video_id)
+	log.Println("Title: " + title)
+	log.Println("Description: " + description)
+	videoDetails := &Video{
+		ID : video_id,
+		Title : title,
+		Description : description,
+	}
+	videoDetailsJSON, err := json.Marshal(videoDetails)
+	
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Fprintf(w, string(videoDetailsJSON))		
+}
+
 func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	video_id := strings.Split(r.URL.Path[1:], "/")[1]
 
@@ -205,7 +242,7 @@ func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	videoChunkFileName := strings.Split(r.URL.Path[1:], "/")[2]
+	videoChunkFileName := strings.Split(r.URL.Path[1:], "/")[3]
 
 	log.Println("Video chunk requested: " + videoChunkFileName)
 
