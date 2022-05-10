@@ -2,32 +2,42 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"regexp"
 	"video-streaming-server/controllers"
 	"video-streaming-server/database"
 	"video-streaming-server/utils"
-	. "video-streaming-server/structs"
 )
 
+/*
+	/video/ - Get All Videos
+	/video/[id] - Get A Video
+	/video/[id]/stream - Get The Manifest File For The Video
+	/video/[id]/stream/[filename] - Get The Segment of Video
+*/
+
 func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	if r.Method == "POST" {
+	path := r.URL.Path
+	method := r.Method
+
+	if method == "POST" {
 		controllers.UploadVideo(w, r, db)
-	} else if r.Method == "GET" {
-		log.Println("GET: " + r.URL.Path)
-		log.Print("Manifest Request:")
-		log.Println(regexp.MatchString("^/video/[a-zA-B0-9]+/?$", r.URL.Path))
-		log.Print("Segment Request:")
-		log.Println(regexp.MatchString("^/video/[a-zA-B0-9]+/[a-zA-B0-9]+/?$", r.URL.Path))
+	} else if method == "GET" {
+		log.Println("GET: " + path)
 	
-		if r.URL.Path == "/video/" {
+		if path == "/video/" {
 			controllers.GetVideos(w, r, db)
-		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/?$", r.URL.Path); err == nil && matched {
+		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/?$", path); err == nil && matched {
+			log.Println("Get video details")
+			controllers.GetVideo(w, r, db)
+		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/stream/?$", path); err == nil && matched {
+			log.Print("Manifest Request:")
+			log.Println(regexp.MatchString("^/video/[a-zA-B0-9]+/stream/?$", path))
 			controllers.GetManifestFile(w, r, db)
-		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/[a-zA-B0-9_]+.ts/?$", r.URL.Path); err == nil && matched {
+		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/stream/[a-zA-B0-9_]+.ts/?$", r.URL.Path); err == nil && matched {
+			log.Print("Segment Request:")
+			log.Println(regexp.MatchString("^/video/[a-zA-B0-9]+/stream/[a-zA-B0-9_]+.ts/?$", path))
 			controllers.GetTSFiles(w, r, db)
 		}
 	}
@@ -43,44 +53,6 @@ func homePageHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/index.html"
 		http.ServeFile(w, r, p)
-	}
-}
-
-func videoDetailsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	if r.Method == "GET" {
-		log.Println("GET: " + r.URL.Path)
-		video_id := r.URL.Path[len("/video/details/"):]
-		log.Println("Details of " + video_id + " requested.")
-		detailsQuery, err := db.Prepare(`SELECT
-			title, description
-		FROM
-			videos
-		WHERE
-			video_id=?`)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer detailsQuery.Close()
-		var  title, description string
-		err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Println("Video ID: " + video_id)
-		log.Println("Title: " + title)
-		log.Println("Description: " + description)
-		videoDetails := &Video{
-			ID : video_id,
-			Title : title,
-			Description : description,
-		}
-		videoDetailsJSON, err := json.Marshal(videoDetails)
-		
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fmt.Fprintf(w, string(videoDetailsJSON))		
 	}
 }
 
@@ -116,9 +88,6 @@ func setUpRoutes(db *sql.DB) {
 	http.HandleFunc("/watch", watchPageHandler)
 	http.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
-	})
-	http.HandleFunc("/video/details/", func(w http.ResponseWriter, r *http.Request) {
-		videoDetailsHandler(w, r, db)
 	})
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Routes set.")
