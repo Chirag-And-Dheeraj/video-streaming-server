@@ -3,6 +3,7 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 func LoadEnvVars() {
@@ -59,7 +61,7 @@ func BreakFile(videoPath string, fileName string) bool {
 	}
 }
 
-func ResumeUploadIfAny() {
+func ResumeUploadIfAny(db *sql.DB) {
 	folders, err := ioutil.ReadDir("segments")
 
 	if err != nil {
@@ -67,29 +69,29 @@ func ResumeUploadIfAny() {
 	}
 
 	for _, folder := range folders {
-		UploadToDeta(folder.Name())
+		UploadToDeta(folder.Name(), db)
 	}
 }
 
-func UploadToDeta(fileName string) {
-	files, err := ioutil.ReadDir(fmt.Sprintf("segments/%s", fileName))
+func UploadToDeta(folderName string, db *sql.DB) {
+	files, err := ioutil.ReadDir(fmt.Sprintf("segments/%s", folderName))
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	if len(files) == 0 {
-		err = os.Remove("segments/" + fileName)
+		err = os.Remove("segments/" + folderName)
 		if err != nil {
 			log.Fatal(err)
 		}
 		return
 	}
 
-	log.Println("Now uploading chunks of " + fileName + " to Deta Drive...")
+	log.Println("Now uploading chunks of " + folderName + " to Deta Drive...")
 	var count int = -1
 	for idx, file := range files {
-		fileBytes, err := ioutil.ReadFile(fmt.Sprintf("segments/%s/%s", fileName, file.Name()))
+		fileBytes, err := ioutil.ReadFile(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
 
 		if err != nil {
 			log.Fatal(err)
@@ -114,15 +116,39 @@ func UploadToDeta(fileName string) {
 			log.Fatal(response.StatusCode)
 		} else {
 			count = idx
-			err = os.Remove("segments/" + fileName + "/" + file.Name())
+			err = os.Remove("segments/" + folderName + "/" + file.Name())
 			if err != nil {
 				log.Fatal(err)
 			}
 		}
 	}
 
+	log.Println("Updating upload status in database record...")
+	updateStatement, err := db.Prepare(`
+	UPDATE
+		videos 
+	SET 
+		upload_status=?,
+		upload_end_time=?
+		WHERE
+		video_id=?;
+	`)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = updateStatement.Exec(1, time.Now(), folderName)
+
+	if err != nil {
+		log.Fatal(err)
+	} else {
+		log.Println("Database record updated.")
+		log.Println("Finished uploading", folderName, " :)")
+	}
+
 	if count == len(files)-1 {
-		err = os.Remove("segments/" + fileName)
+		err = os.Remove("segments/" + folderName)
 		if err != nil {
 			log.Fatal(err)
 		}

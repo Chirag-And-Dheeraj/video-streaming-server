@@ -98,7 +98,7 @@ func initServer() {
 	utils.LoadEnvVars()
 	db := database.Connect()
 	setUpRoutes(db)
-	utils.ResumeUploadIfAny()
+	utils.ResumeUploadIfAny(db)
 }
 
 func main() {

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 	"video-streaming-server/utils"
-	. "video-streaming-server/structs"
+	. "video-streaming-server/types"
 )
 
 func closeVideoFile(tmpFile *os.File) {
@@ -92,39 +92,16 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		log.Println("Received all chunks for: " + serverFileName)
 		log.Println("Breaking the video into .ts files.")
 
-		breakResult := utils.BreakFile(("./video/" + serverFileName), strings.Split(serverFileName, ".")[0])
+		breakResult := utils.BreakFile(("./video/" + serverFileName), fileNameHash)
 
 		if breakResult {
 			log.Println("Successfully broken " + fileName + " into .ts files.")
 		} else {
 			log.Println("Error breaking " + fileName + " into .ts files.")
 		}
-		utils.UploadToDeta(strings.Split(serverFileName, ".")[0])
+		utils.UploadToDeta(fileNameHash, db)
 
 		log.Println("Successfully uploaded chunks of", fileName, "to Deta Drive")
-		log.Println("Updating upload status in database record...")
-		updateStatement, err := db.Prepare(`
-		UPDATE
-			videos 
-		SET 
-			upload_status=?,
-			upload_end_time=?
-			WHERE
-			video_id=?;
-		`)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		_, err = updateStatement.Exec(1, time.Now(), fileNameHash)
-
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			log.Println("Database record updated.")
-			log.Println("Finished uploading", fileName, " :)")
-		}
 	}
 }
 
