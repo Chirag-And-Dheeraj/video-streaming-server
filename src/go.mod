@@ -1,4 +1,4 @@
-module video-streaming-server
+module dekho
 
 go 1.18
 

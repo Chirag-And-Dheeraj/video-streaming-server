@@ -2,12 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"dekho/controllers"
+	"dekho/database"
+	"dekho/utils"
 	"log"
 	"net/http"
 	"regexp"
-	"video-streaming-server/controllers"
-	"video-streaming-server/database"
-	"video-streaming-server/utils"
 )
 
 /*
@@ -32,12 +32,10 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Println("Get video details")
 			controllers.GetVideo(w, r, db)
 		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/stream/?$", path); err == nil && matched {
-			log.Print("Manifest Request:")
-			log.Println(regexp.MatchString("^/video/[a-zA-B0-9]+/stream/?$", path))
+			log.Print("Manifest Request.")
 			controllers.GetManifestFile(w, r, db)
 		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/stream/[a-zA-B0-9_]+.ts/?$", r.URL.Path); err == nil && matched {
-			log.Print("Segment Request:")
-			log.Println(regexp.MatchString("^/video/[a-zA-B0-9]+/stream/[a-zA-B0-9_]+.ts/?$", path))
+			log.Print("Segment Request.")
 			controllers.GetTSFiles(w, r, db)
 		}
 	}
@@ -89,7 +87,7 @@ func setUpRoutes(db *sql.DB) {
 	http.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
 	})
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("client/static"))))
 	log.Println("Routes set.")
 }
 

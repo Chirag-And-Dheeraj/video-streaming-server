@@ -3,6 +3,8 @@ package controllers
 import (
 	"crypto/sha1"
 	"database/sql"
+	. "dekho/types"
+	"dekho/utils"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,8 +14,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"video-streaming-server/utils"
-	. "video-streaming-server/types"
 )
 
 func closeVideoFile(tmpFile *os.File) {
