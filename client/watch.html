@@ -10,8 +10,8 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@200&family=Megrim&family=Mystery+Quest&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="static/style.css" />
-    <title>Dekho: Your very own - Video Storage Service</title>
+    <link rel="stylesheet" href="../static/style.css" />
+    <title>Dekho: Your very own - Large File Storage</title>
   </head>
   <body>
     <header>
@@ -24,9 +24,18 @@
       </nav>
     </header>
     <main>
-      <h1 class="page-title special-blue">View Files</h1>
-      <section id="video_list"></section>
+      <h1 class="page-title special-blue">View Video</h1>
+      <video
+        id="video"
+        autoplay="true"
+        muted="muted"
+        controls
+        width="500"
+      ></video>
+      <h2 id="video_title"></h2>
+      <p id="video_description"></p>
     </main>
-    <script src="static/list.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="../static/watch.js"></script>
   </body>
 </html>

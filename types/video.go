@@ -1,4 +1,4 @@
-package types
+package structs
 
 type Video struct {
 	ID          string `json:"id"`
