@@ -5,15 +5,15 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-	"video-streaming-server/utils"
 	. "video-streaming-server/types"
+	"video-streaming-server/utils"
 )
 
 func closeVideoFile(tmpFile *os.File) {
@@ -79,16 +79,46 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Print("Database record created.")
 		}
 	}
-	d, _ := ioutil.ReadAll(r.Body)
 
-	tmpFile, _ := os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_CREATE, 0644)
-	tmpFile.Write(d)
+	d, _ := io.ReadAll(r.Body)
 
-	fileInfo, _ := tmpFile.Stat()
+	var tmpFile *os.File
+	var err error
+
+	if isFirstChunk == "true" {
+		tmpFile, err = os.Create("./video/" + serverFileName)
+		if err != nil {
+			log.Println("Error creating file:", err)
+			http.Error(w, "Error creating file", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		tmpFile, err = os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+		if err != nil {
+			log.Println("Error opening file:", err)
+			http.Error(w, "Error opening file", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	_, err = tmpFile.Write(d)
+
+	if err != nil {
+		log.Println("Error writing to file:", err)
+		http.Error(w, "Error writing to file", http.StatusInternalServerError)
+		return
+	}
+
+	fileInfo, err := tmpFile.Stat()
+
+	if err != nil {
+		log.Println("Error getting file info:", err)
+		http.Error(w, "Error getting file info", http.StatusInternalServerError)
+		return
+	}
 
 	if fileInfo.Size() == int64(fileSize) {
-		defer closeVideoFile(tmpFile)
-		fmt.Fprintf(w, "\nFile received completely!!")
+		fmt.Fprint(w, "\nFile received completely!!")
 		log.Println("Received all chunks for: " + serverFileName)
 		log.Println("Breaking the video into .ts files.")
 
@@ -96,12 +126,13 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 		if breakResult {
 			log.Println("Successfully broken " + fileName + " into .ts files.")
+			log.Println("Deleting the original file from server.")
+			closeVideoFile(tmpFile)
+			utils.UploadToDeta(fileNameHash, db)
+			log.Println("Successfully uploaded chunks of", fileName, "to Deta Drive")
 		} else {
 			log.Println("Error breaking " + fileName + " into .ts files.")
 		}
-		utils.UploadToDeta(fileNameHash, db)
-
-		log.Println("Successfully uploaded chunks of", fileName, "to Deta Drive")
 	}
 }
 
@@ -151,7 +182,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if err != nil {
 		log.Fatal(err)
 	} else {
-		fmt.Fprintf(w, string(recordsJSON))
+		fmt.Fprint(w, string(recordsJSON))
 	}
 }
 
@@ -170,7 +201,7 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		log.Fatal(err)
 	}
 	defer detailsQuery.Close()
-	var  title, description string
+	var title, description string
 	err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
 	if err != nil {
 		log.Fatal(err)
@@ -179,17 +210,17 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	log.Println("Title: " + title)
 	log.Println("Description: " + description)
 	videoDetails := &Video{
-		ID : video_id,
-		Title : title,
-		Description : description,
+		ID:          video_id,
+		Title:       title,
+		Description: description,
 	}
 	videoDetailsJSON, err := json.Marshal(videoDetails)
-	
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Fprintf(w, string(videoDetailsJSON))		
+	fmt.Fprint(w, string(videoDetailsJSON))
 }
 
 func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -200,20 +231,29 @@ func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + video_id + ".m3u8"
 
 	request, err := http.NewRequest("GET", getManifestFile, nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
 
 	client := &http.Client{}
 
 	response, err := client.Do(request)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer response.Body.Close()
 
-	bodyBytes, err := ioutil.ReadAll(response.Body)
+	bodyBytes, err := io.ReadAll(response.Body)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	w.Header().Set("Content-Type", "application/x-mpegURL")
 	w.Write(bodyBytes)
 }
@@ -226,6 +266,11 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	getSegmentFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + videoChunkFileName
 
 	request, err := http.NewRequest("GET", getSegmentFile, nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
 
 	client := &http.Client{}
@@ -236,10 +281,12 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 	defer response.Body.Close()
 
-	bodyBytes, err := ioutil.ReadAll(response.Body)
+	bodyBytes, err := io.ReadAll(response.Body)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	w.Header().Set("Content-Type", "video/MP2T")
 	w.Write(bodyBytes)
 }

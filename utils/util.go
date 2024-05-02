@@ -40,20 +40,25 @@ func LoadEnvVars() {
 	log.Println("Environment variables set.")
 }
 
-
 func BreakFile(videoPath string, fileName string) bool {
 	// ffmpeg -y -i DearZindagi.mkv -codec copy -map 0 -f segment -segment_time 7 -segment_format mpegts -segment_list DearZindagi_index.m3u8 -segment_list_type m3u8 ./segment_no_%d.ts
+
+	log.Println("Inside BreakFile function.")
 
 	if err := os.Mkdir(fmt.Sprintf("segments/%s", fileName), os.ModePerm); err != nil {
 		log.Fatal(err)
 	}
 
-	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-codec", "copy", "-map", "0", "-f", "segment", "-segment_time", "7", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"\\segments\\"+fileName+"\\"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"\\segments\\"+fileName+"\\"+fileName+"_"+"segment_no_%d.ts")
+	log.Println("Created directory inside segments folder.")
+
+	log.Println("Video path: " + videoPath)
+
+	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-codec", "copy", "-map", "0", "-f", "segment", "-segment_time", "7", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		fmt.Printf("%s\n", output)
+		log.Printf("%s\n", output)
 		log.Fatal(err)
 		return false
 	} else {
@@ -74,6 +79,9 @@ func ResumeUploadIfAny(db *sql.DB) {
 }
 
 func UploadToDeta(folderName string, db *sql.DB) {
+	log.Println("Uploading chunks to SFS.")
+
+	// TODO: remove deprecated ioutil.ReadDir
 	files, err := ioutil.ReadDir(fmt.Sprintf("segments/%s", folderName))
 
 	if err != nil {
@@ -91,6 +99,7 @@ func UploadToDeta(folderName string, db *sql.DB) {
 	log.Println("Now uploading chunks of " + folderName + " to Deta Drive...")
 	var count int = -1
 	for idx, file := range files {
+		// TODO: remove deprecated ioutil.ReadFile
 		fileBytes, err := ioutil.ReadFile(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
 
 		if err != nil {
@@ -102,6 +111,11 @@ func UploadToDeta(folderName string, db *sql.DB) {
 		uploadRequestURL := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files?name=" + param
 
 		request, err := http.NewRequest("POST", uploadRequestURL, postBody)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
 
 		client := &http.Client{}
@@ -154,4 +168,3 @@ func UploadToDeta(folderName string, db *sql.DB) {
 		}
 	}
 }
-
