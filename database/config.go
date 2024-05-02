@@ -25,7 +25,6 @@ func Connect() *sql.DB {
 		upload_end_time TEXT
 	)`)
 
-
 	if err != nil {
 		log.Fatal(err)
 	}

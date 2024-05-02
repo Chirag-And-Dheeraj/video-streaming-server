@@ -53,7 +53,7 @@ uploadVideoButton.addEventListener("click", () => {
         method: "POST",
         headers: {
           "content-type": "application/octet-stream",
-          "content-length": chunk.length,
+          "content-length": chunk.byteLength,
           "file-name": fileName,
           "file-size": ev.target.result.byteLength,
           "first-chunk": firstChunk,
@@ -72,10 +72,4 @@ uploadVideoButton.addEventListener("click", () => {
   };
 
   fileReader.readAsArrayBuffer(theFile);
-
-  // const thumbnailReader = new FileReader();
-
-  // thumbnailReader.onload = async
-
-  // thumbnailReader.readAsDataURL(thumbnail.files[0]);
 });

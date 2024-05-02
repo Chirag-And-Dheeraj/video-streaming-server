@@ -25,7 +25,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		controllers.UploadVideo(w, r, db)
 	} else if method == "GET" {
 		log.Println("GET: " + path)
-	
+
 		if path == "/video/" {
 			controllers.GetVideos(w, r, db)
 		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/?$", path); err == nil && matched {
