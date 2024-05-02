@@ -51,15 +51,11 @@ func BreakFile(videoPath string, fileName string) bool {
 
 	log.Println("Created directory inside segments folder.")
 
-	// return false
-
 	log.Println("Video path: " + videoPath)
 
 	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-codec", "copy", "-map", "0", "-f", "segment", "-segment_time", "7", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
-
-	// time.Sleep(500 * time.Second)
 
 	if err != nil {
 		log.Printf("%s\n", output)
