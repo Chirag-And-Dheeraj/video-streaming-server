@@ -3,12 +3,13 @@ package utils
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha1"
 	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"mime/multipart"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -74,14 +75,11 @@ func ResumeUploadIfAny(db *sql.DB) {
 	}
 
 	for _, folder := range folders {
-		UploadToDeta(folder.Name(), db)
+		UploadToAppwrite(folder.Name(), db)
 	}
 }
 
-func UploadToDeta(folderName string, db *sql.DB) {
-	log.Println("Uploading chunks to SFS.")
-
-	// TODO: remove deprecated ioutil.ReadDir
+func UploadToAppwrite(folderName string, db *sql.DB) {
 	files, err := ioutil.ReadDir(fmt.Sprintf("segments/%s", folderName))
 
 	if err != nil {
@@ -96,27 +94,64 @@ func UploadToDeta(folderName string, db *sql.DB) {
 		return
 	}
 
-	log.Println("Now uploading chunks of " + folderName + " to Deta Drive...")
+	log.Println("Now uploading chunks of " + folderName + " to Appwrite Storage...")
 	var count int = -1
 	for idx, file := range files {
-		// TODO: remove deprecated ioutil.ReadFile
-		fileBytes, err := ioutil.ReadFile(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
+		fileToUpload, err := ioutil.ReadFile(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		postBody := bytes.NewBuffer(fileBytes)
-		param := url.QueryEscape(file.Name())
-		uploadRequestURL := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files?name=" + param
+		uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files"
 
-		request, err := http.NewRequest("POST", uploadRequestURL, postBody)
+		var requestBody bytes.Buffer
+		writer := multipart.NewWriter(&requestBody)
+
+		fileId := "nil"
+		fileComps := strings.Split(file.Name(), ".")
+		if fileComps[1] == "m3u8" {
+			fileId = fileComps[0]
+		} else {
+			hashChecksum := sha1.New()
+			hashChecksum.Write([]byte(fileComps[0]))
+			fileId = fmt.Sprintf("%x", hashChecksum.Sum(nil))[:36]
+		}
+
+		err = writer.WriteField("fileId", fileId)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
+		part, err := writer.CreateFormFile("file", file.Name())
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_, err = part.Write(fileToUpload)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		err = writer.Close()
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		request, err := http.NewRequest("POST", uploadRequestURL, &requestBody)
+		if err != nil {
+			log.Printf("Error creating request")
+			log.Fatal(err)
+		}
+
+		request.Header.Set("Content-Type", writer.FormDataContentType())
+		request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+		request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+		request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
 
 		client := &http.Client{}
 
@@ -124,10 +159,14 @@ func UploadToDeta(folderName string, db *sql.DB) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer response.Body.Close()
 
+		defer response.Body.Close()
 		if response.StatusCode != 201 {
-			log.Fatal(response.StatusCode)
+			body, err := ioutil.ReadAll(response.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+			log.Fatal(string(body))
 		} else {
 			count = idx
 			err = os.Remove("segments/" + folderName + "/" + file.Name())

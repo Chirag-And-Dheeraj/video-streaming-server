@@ -35,13 +35,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	isFirstChunk := r.Header.Get("first-chunk")
 	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
 
-	hashChecksum := sha1.New()
-
-	hashChecksum.Write([]byte(fileName))
-
-	fileNameHash := fmt.Sprintf("%x", hashChecksum.Sum(nil))
-
-	serverFileName := fileNameHash + ".mp4"
+	serverFileName := fileName + ".mp4"
 
 	if isFirstChunk == "true" {
 		title := r.Header.Get("title")
@@ -50,7 +44,6 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		log.Println("Size of the file received:", fileSize)
 		log.Println("Title: ", title)
 		log.Println("Description: ", description)
-		log.Println("FileName hash: " + fileNameHash)
 		log.Println("Creating a database record...")
 
 		insertStatement, err := db.Prepare(`
@@ -71,7 +64,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Fatal(err)
 		}
 
-		_, err = insertStatement.Exec(fileNameHash, title, description, time.Now(), 0)
+		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0)
 
 		if err != nil {
 			log.Fatal(err)
@@ -118,21 +111,25 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	if fileInfo.Size() == int64(fileSize) {
-		fmt.Fprint(w, "\nFile received completely!!")
+		w.WriteHeader(http.StatusCreated)
+		w.Write([]byte("File received completely."))
 		log.Println("Received all chunks for: " + serverFileName)
 		log.Println("Breaking the video into .ts files.")
 
-		breakResult := utils.BreakFile(("./video/" + serverFileName), fileNameHash)
+		breakResult := utils.BreakFile(("./video/" + serverFileName), fileName)
 
 		if breakResult {
 			log.Println("Successfully broken " + fileName + " into .ts files.")
 			log.Println("Deleting the original file from server.")
 			closeVideoFile(tmpFile)
-			utils.UploadToDeta(fileNameHash, db)
-			log.Println("Successfully uploaded chunks of", fileName, "to Deta Drive")
+			utils.UploadToAppwrite(fileName, db)
+			log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
 		} else {
 			log.Println("Error breaking " + fileName + " into .ts files.")
 		}
+	} else {
+		w.WriteHeader(http.StatusPartialContent)
+		w.Write([]byte("Receiving chunks of the file."))
 	}
 }
 
@@ -224,11 +221,11 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	video_id := strings.Split(r.URL.Path[1:], "/")[1]
+	videoId := strings.Split(r.URL.Path[1:], "/")[1]
 
-	log.Println("Video ID: " + video_id)
+	log.Println("Video ID: " + videoId)
 
-	getManifestFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + video_id + ".m3u8"
+	getManifestFile := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/" + videoId + "/view"
 
 	request, err := http.NewRequest("GET", getManifestFile, nil)
 
@@ -236,7 +233,10 @@ func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		log.Fatal(err)
 	}
 
-	request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
 
 	client := &http.Client{}
 
@@ -259,11 +259,16 @@ func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	videoChunkFileName := strings.Split(r.URL.Path[1:], "/")[3]
+	videoName := strings.Split(r.URL.Path[1:], "/")[3]
 
-	log.Println("Video chunk requested: " + videoChunkFileName)
+	videoComps := strings.Split(videoName, ".")
+	hashChecksum := sha1.New()
+	hashChecksum.Write([]byte(videoComps[0]))
+	fileId := fmt.Sprintf("%x", hashChecksum.Sum(nil))[:36]
 
-	getSegmentFile := "https://drive.deta.sh/v1/" + os.Getenv("PROJECT_ID") + "/video-streaming-server/files/download?name=" + videoChunkFileName
+	log.Println("Video chunk requested: " + fileId)
+
+	getSegmentFile := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/" + fileId + "/view"
 
 	request, err := http.NewRequest("GET", getSegmentFile, nil)
 
@@ -271,7 +276,10 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		log.Fatal(err)
 	}
 
-	request.Header.Add("X-Api-Key", os.Getenv("PROJECT_KEY"))
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
 
 	client := &http.Client{}
 
