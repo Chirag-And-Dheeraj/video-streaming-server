@@ -1,8 +1,5 @@
 .env
 video/
 segments/
-detakeys.txt
-env.go
-commentedCode.txt
-try.go
 database.db
+main.exe

@@ -28,16 +28,16 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 		if path == "/video/" {
 			controllers.GetVideos(w, r, db)
-		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/?$", path); err == nil && matched {
+		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
 			log.Println("Get video details")
 			controllers.GetVideo(w, r, db)
-		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/stream/?$", path); err == nil && matched {
+		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/?$", path); err == nil && matched {
 			log.Print("Manifest Request:")
-			log.Println(regexp.MatchString("^/video/[a-zA-B0-9]+/stream/?$", path))
+			log.Println(regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/?$", path))
 			controllers.GetManifestFile(w, r, db)
-		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9]+/stream/[a-zA-B0-9_]+.ts/?$", r.URL.Path); err == nil && matched {
+		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/[a-zA-B0-9_-]+.ts/?$", r.URL.Path); err == nil && matched {
 			log.Print("Segment Request:")
-			log.Println(regexp.MatchString("^/video/[a-zA-B0-9]+/stream/[a-zA-B0-9_]+.ts/?$", path))
+			log.Println(regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/[a-zA-B0-9_-]+.ts/?$", path))
 			controllers.GetTSFiles(w, r, db)
 		}
 	}
