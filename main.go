@@ -1,6 +1,8 @@
 package main
 
 import (
+	"html"
+	"fmt"
 	"database/sql"
 	"log"
 	"net/http"
@@ -22,6 +24,7 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	method := r.Method
 
 	if method == "POST" {
+		log.Println("POST: " + path)
 		controllers.UploadVideo(w, r, db)
 	} else if method == "GET" {
 		log.Println("GET: " + path)
@@ -43,12 +46,10 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
-var validPath = regexp.MustCompile("^/(upload)/([a-zA-Z0-9]+)$")
-
 func homePageHandler(w http.ResponseWriter, r *http.Request) {
-
 	if r.URL.Path != "/" {
-		return
+		response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
+		http.Error(w, response, http.StatusNotFound)
 	} else if r.Method == "GET" {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/index.html"
