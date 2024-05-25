@@ -90,7 +90,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	} else {
 		tmpFile, err = os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
-			log.Println("Error opening file:", err)
+			log.Println("Error opening the temp file on the server for appending chunks:", err)
 			http.Error(w, "Error Processing File", http.StatusInternalServerError)
 			return
 		}
