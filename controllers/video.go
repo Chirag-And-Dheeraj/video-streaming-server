@@ -279,7 +279,7 @@ func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Error Retreiving Video", http.StatusInternalServerError)
+		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
 		return
 	}
 
