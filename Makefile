@@ -11,11 +11,12 @@ install:
 	else \
 		echo "Installing Go version 1.22.2..."; \
 		wget https://golang.org/dl/go1.22.2.linux-amd64.tar.gz -O go1.22.2.tar.gz || exit 1; \
-		tar -C /usr/local -xzf go1.22.2.tar.gz || exit 1; \
+		sudo tar -C /usr/local -xzf go1.22.2.tar.gz || exit 1; \
 		echo "Go version 1.22.2 installed."; \
+		rm go1.22.2.tar.gz; \
 		echo "Updating PATH to include Go binary directory..."; \
 		echo "export PATH=\$$PATH:/usr/local/go/bin" >> ~/.bashrc; \
-		source ~/.bashrc; \
+		. ~/.bashrc; \
 	fi
 	@echo "Checking for FFMpeg installation..."
 	@if command -v ffmpeg > /dev/null 2>&1; then \
