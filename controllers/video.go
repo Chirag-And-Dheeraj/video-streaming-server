@@ -83,7 +83,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if isFirstChunk == "true" {
 		tmpFile, err = os.Create("./video/" + serverFileName)
 		if err != nil {
-			log.Println("Error creating file:", err)
+			log.Println("Error creating a temp file on the server:", err)
 			http.Error(w, "Error Processing File", http.StatusInternalServerError)
 			return
 		}
