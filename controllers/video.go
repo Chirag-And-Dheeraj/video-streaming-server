@@ -235,7 +235,7 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Error Retreiving Record", http.StatusInternalServerError)
+		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
