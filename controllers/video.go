@@ -99,7 +99,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	_, err = tmpFile.Write(d)
 
 	if err != nil {
-		log.Println("Error writing to file:", err)
+		log.Println("Error appending chunks to file:", err)
 		http.Error(w, "Error Processing File", http.StatusInternalServerError)
 		return
 	}
