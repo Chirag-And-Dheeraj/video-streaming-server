@@ -129,7 +129,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
 		} else {
 			log.Println("Error breaking " + fileName + " into .ts files.")
-			http.Error(w, "Error Processing File", http.StatusInternalServerError)
+			http.Error(w, "Error processing file", http.StatusInternalServerError)
 			return
 		}
 	} else {
