@@ -3,6 +3,7 @@ const divOutput = document.getElementById("divOutput");
 const video = document.getElementById("video");
 const title = document.getElementById("title");
 const description = document.getElementById("description");
+const error = document.getElementById("error");
 
 uploadVideoButton.addEventListener("click", () => {
     console.log(title.value);
@@ -11,8 +12,18 @@ uploadVideoButton.addEventListener("click", () => {
     const fileReader = new FileReader();
     const theFile = video.files[0];
 
+    console.log(theFile.type);
+    const type = theFile.type;
+    if(type !== "video/mp4") {
+        error.textContent = "Only .mp4 files are supported";
+        error.style.display = "block";
+        return;
+    }
+
+    error.style.display = "none";
+
     fileReader.onload = async (ev) => {
-        const CHUNK_SIZE = 5000000;
+        const CHUNK_SIZE = 20000000;
         const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
         console.log(chunkCount);
         console.log("Read successfully");

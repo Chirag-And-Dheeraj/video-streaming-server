@@ -6,7 +6,7 @@ import (
 	"crypto/sha1"
 	"database/sql"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"mime/multipart"
 	"net/http"
@@ -68,7 +68,7 @@ func BreakFile(videoPath string, fileName string) bool {
 }
 
 func ResumeUploadIfAny(db *sql.DB) {
-	folders, err := ioutil.ReadDir("segments")
+	folders, err := os.ReadDir("segments")
 
 	if err != nil {
 		log.Fatal(err)
@@ -80,7 +80,7 @@ func ResumeUploadIfAny(db *sql.DB) {
 }
 
 func UploadToAppwrite(folderName string, db *sql.DB) {
-	files, err := ioutil.ReadDir(fmt.Sprintf("segments/%s", folderName))
+	files, err := os.ReadDir(fmt.Sprintf("segments/%s", folderName))
 
 	if err != nil {
 		log.Fatal(err)
@@ -97,8 +97,11 @@ func UploadToAppwrite(folderName string, db *sql.DB) {
 	log.Println("Now uploading chunks of " + folderName + " to Appwrite Storage...")
 	var count int = -1
 	for idx, file := range files {
-		fileToUpload, err := ioutil.ReadFile(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
-
+		x, err:= os.Stat(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
+		log.Println(x.Size(), err)
+		log.Println(x.Name())
+		fileToUpload, err := os.ReadFile(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
+		
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -154,15 +157,14 @@ func UploadToAppwrite(folderName string, db *sql.DB) {
 		request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
 
 		client := &http.Client{}
-
 		response, err := client.Do(request)
 		if err != nil {
 			log.Fatal(err)
 		}
-
 		defer response.Body.Close()
+		log.Println(response.StatusCode)
 		if response.StatusCode != 201 {
-			body, err := ioutil.ReadAll(response.Body)
+			body, err := io.ReadAll(response.Body)
 			if err != nil {
 				log.Fatal(err)
 			}
