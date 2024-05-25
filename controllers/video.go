@@ -151,7 +151,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println("Error running select query for all video records.")
-		http.Error(w, "Error Retreiving Records", http.StatusInternalServerError)
+		http.Error(w, "Error retreiving videos", http.StatusInternalServerError)
 		return
 	}
 
