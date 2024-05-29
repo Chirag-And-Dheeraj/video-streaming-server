@@ -97,9 +97,6 @@ func UploadToAppwrite(folderName string, db *sql.DB) {
 	log.Println("Now uploading chunks of " + folderName + " to Appwrite Storage...")
 	var count int = -1
 	for idx, file := range files {
-		x, err:= os.Stat(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
-		log.Println(x.Size(), err)
-		log.Println(x.Name())
 		fileToUpload, err := os.ReadFile(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
 		
 		if err != nil {
