@@ -68,7 +68,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 		if err != nil {
 			log.Println(err)
-			http.Error(w, "Error Processing File", http.StatusInternalServerError)
+			http.Error(w, "Error processing file", http.StatusInternalServerError)
 			return
 		} else {
 			log.Println("Database record created.")
@@ -84,14 +84,14 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		tmpFile, err = os.Create("./video/" + serverFileName)
 		if err != nil {
 			log.Println("Error creating a temp file on the server:", err)
-			http.Error(w, "Error Processing File", http.StatusInternalServerError)
+			http.Error(w, "Error processing file", http.StatusInternalServerError)
 			return
 		}
 	} else {
 		tmpFile, err = os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
 			log.Println("Error opening the temp file on the server for appending chunks:", err)
-			http.Error(w, "Error Processing File", http.StatusInternalServerError)
+			http.Error(w, "Error processing file", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -100,7 +100,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println("Error appending chunks to file:", err)
-		http.Error(w, "Error Processing File", http.StatusInternalServerError)
+		http.Error(w, "Error processing file", http.StatusInternalServerError)
 		return
 	}
 
@@ -108,7 +108,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println("Error getting file info:", err)
-		http.Error(w, "Error Processing File", http.StatusInternalServerError)
+		http.Error(w, "Error processing file", http.StatusInternalServerError)
 		return
 	}
 
@@ -170,7 +170,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 		if err != nil {
 			log.Println("Error scanning rows")
-			http.Error(w, "Error Retreiving Records", http.StatusInternalServerError)
+			http.Error(w, "Error retreiving records", http.StatusInternalServerError)
 			return
 		}
 
@@ -187,7 +187,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Error Retreiving Records", http.StatusInternalServerError)
+		http.Error(w, "Error retreiving records", http.StatusInternalServerError)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -209,7 +209,7 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Error Retreiving Record", http.StatusInternalServerError)
+		http.Error(w, "Error retreiving record", http.StatusInternalServerError)
 	}
 
 	defer detailsQuery.Close()
@@ -217,15 +217,18 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var title, description string
 	err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
 
+
 	if err != nil {
+		if err == sql.ErrNoRows {
+			log.Println(err)
+			http.Error(w, "Video record not found", http.StatusNotFound)
+			return
+		}
 		log.Println(err)
-		http.Error(w, "Error Retreiving Record", http.StatusInternalServerError)
+		http.Error(w, "Error retreiving record", http.StatusInternalServerError)
 		return
 	}
 
-	log.Println("Video ID: " + video_id)
-	log.Println("Title: " + title)
-	log.Println("Description: " + description)
 	videoDetails := &Video{
 		ID:          video_id,
 		Title:       title,
@@ -275,6 +278,11 @@ func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	defer response.Body.Close()
 
+	if response.StatusCode == 404 {
+		http.Error(w, "Video record not found", http.StatusNotFound)
+		return
+	}
+
 	bodyBytes, err := io.ReadAll(response.Body)
 
 	if err != nil {
@@ -322,6 +330,11 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode == 404 {
+		http.Error(w, "Video chunk not found", http.StatusNotFound)
+		return
+	}
 
 	bodyBytes, err := io.ReadAll(response.Body)
 
