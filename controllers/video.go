@@ -54,17 +54,18 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 						title,
 						description,
 						upload_initiate_time,
-						upload_status
+						upload_status,
+						upload_end_time
 					) 
 				VALUES 
-					(?,?,?,?,?);
+					($1,$2,$3,$4,$5,$6)
 		`)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0)
+		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0, time.Now())
 
 		if err != nil {
 			log.Fatal(err)
@@ -192,17 +193,22 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		FROM
 			videos
 		WHERE
-			video_id=?
+			video_id=$1;
 	`)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer detailsQuery.Close()
+
 	var title, description string
 	err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	log.Println("Video ID: " + video_id)
 	log.Println("Title: " + title)
 	log.Println("Description: " + description)

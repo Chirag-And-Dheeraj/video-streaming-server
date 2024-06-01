@@ -181,10 +181,10 @@ func UploadToAppwrite(folderName string, db *sql.DB) {
 	UPDATE
 		videos 
 	SET 
-		upload_status=?,
-		upload_end_time=?
+		upload_status=$1,
+		upload_end_time=$2
 		WHERE
-		video_id=?;
+		video_id=$3;
 	`)
 
 	if err != nil {
