@@ -8,11 +8,29 @@ Dekho is a research and study project aimed at understanding and mastering the i
 
 However, expect things to change in the upcoming versions while we shape this into something more refined.
 
-## Key Resources
+## Setup Instructions
 
-Our journey has been greatly enriched by the insights and guidance from various resources. A pivotal article that set us on the right path is "[Learning the basics of video streaming with Golang](https://www.rohitmundra.com/video-streaming-server)" by [Rohit Mundra](https://twitter.com/brohit3).
+- Install the `make` utility because we have created a **_[Makefile](Makefile)_** to ease the setup
+- Clone the repository
+- Create an **_[Appwrite storage bucket](https://appwrite.io/docs/products/storage)_**
+  - Make sure that you make a note of `APPWRITE_KEY`, `APPWRITE_PROJECT_ID` and the `BUCKET_ID`
+- Create a `.env` file using **_[template.env](template.env)_** as a reference.
+- Now we are moving to the dependency installation steps.
+- This project needs `go version go1.22.2` and `ffmpeg` utility.
+- To install these, and the Go dependencies, run `make install`.
+- Once the dependencies are installed successfully, run `make cleanstart`.
+- This command will create all the necessary folders and start the server on `http://127.0.0.1:8000`
+- If you just want to run the server, run: `make start`
+- If you just want to clean up, run: `make clean`
 
-For a comprehensive list of resources that have been instrumental in our learning and development process, please refer to our [documentation](https://github.com/Chirag-And-Dheeraj/video-streaming-server/blob/main/documentation/video-streaming-project-stuff/links.md).
+## Technologies Used
+
+- **Server:** Go
+- **Database:** SQLite
+- **Storage:** [Appwrite Storage](https://appwrite.io/docs/products/storage)
+- **Video Processing:** [FFMPEG](https://ffmpeg.org) for breaking down videos into .ts chunks
+- **Video Player:** [HLS.js](https://github.com/video-dev/hls.js)
+- **Frontend:** HTML, CSS, JS
 
 ## Project Architecture
 
@@ -23,14 +41,11 @@ For a comprehensive list of resources that have been instrumental in our learnin
 
 </details>
 
-## Technologies Used
+## Key Resources
 
-- **Server:** Go
-- **Database:** SQLite
-- **Storage:** Migrating from [Deta Drive](https://deta.space/docs/en/build/reference/drive/) to [Appwrite Storage](https://appwrite.io/docs/products/storage)
-- **Video Processing:** [FFMPEG](https://ffmpeg.org) for breaking down videos into .ts chunks
-- **Video Player:** [HLS.js](https://github.com/video-dev/hls.js)
-- **Frontend:** HTML, CSS, JS
+Our journey has been greatly enriched by the insights and guidance from various resources. A pivotal article that set us on the right path is "[Learning the basics of video streaming with Golang](https://www.rohitmundra.com/video-streaming-server)" by [Rohit Mundra](https://twitter.com/brohit3).
+
+For a comprehensive list of resources that have been instrumental in our learning and development process, please refer to our [documentation](https://github.com/Chirag-And-Dheeraj/video-streaming-server/blob/main/documentation/video-streaming-project-stuff/links.md).
 
 ## Getting Involved
 
