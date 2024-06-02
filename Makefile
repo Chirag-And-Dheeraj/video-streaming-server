@@ -56,3 +56,29 @@ cleanstart:
 	make clean || exit 1
 	make init || exit 1
 	make start || exit 1
+
+postgres:
+	@echo "Checking for PostgreSQL Installation..."
+	@if command -v psql > /dev/null 2>&1; then \
+		echo "Printing something else"; \
+		echo "PostgreSQL is already installed."; \
+	else \
+		echo "Installing PostgreSQL..."; \
+		sudo apt-get update && sudo apt-get install postgresql postgresql-contrib > /dev/null 2>&1 || exit 1; \
+	fi
+
+	@echo "Starting PostgreSQL service...";
+	@if command -v service > /dev/null 2>&1; then \
+		sudo service postgresql start || exit 1; \
+	elif command -v systemctl > /dev/null 2>&1; then \
+		sudo systemctl start postgresql || exit 1; \
+	elif command -v rc-service > /dev/null 2>&1; then \
+		sudo rc-service postgresql start || exit 1; \
+	fi
+
+	@if ps aux | grep -v grep | grep postgres > /dev/null 2>&1; then \
+		echo "PostgreSQL service started.";\
+	else \
+		echo "It didn't start.";\
+	fi
+
