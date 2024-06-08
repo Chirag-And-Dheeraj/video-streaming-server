@@ -10,7 +10,7 @@ install:
 		echo "PostgreSQL is already installed."; \
 	else \
 		echo "Installing PostgreSQL..."; \
-		(sudo apt-get update && sudo apt-get -y install postgresql postgresql-contrib) > /dev/null 2>&1 || exit 1; \
+		(sudo apt-get update && sudo apt-get -y install postgresql postgresql-contrib) || exit 1; \
 		echo "PostgreSQL successfully installed."; \
 	fi
 	@echo "Checking for Go installation..."
