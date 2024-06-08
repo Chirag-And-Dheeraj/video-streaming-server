@@ -67,7 +67,7 @@ start:
 	@if ps aux | grep -v grep | grep postgres > /dev/null 2>&1; then \
 		echo "PostgreSQL service started.";\
 	else \
-		echo "It didn't start.";\
+		echo "PostgreSQL service failed to start.";\
 	fi
 
 	@echo "Starting the Go application..."
