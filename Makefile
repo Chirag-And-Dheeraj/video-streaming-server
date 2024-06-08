@@ -43,7 +43,6 @@ clean:
 	@echo "Cleaning up directories and files..."
 	@if [ -d "video" ]; then rm -r video; fi
 	@if [ -d "segments" ]; then rm -r segments; fi
-	@if [ -f "database.db" ]; then rm database.db; fi
 	@echo "Clean up complete."
 
 # Initialize directories
@@ -53,8 +52,7 @@ init:
 	@mkdir -p segments
 	@echo "Initialization complete."
 
-# Start the Go application
-start:
+start-postgres:
 	@echo "Starting PostgreSQL service...";
 	@if command -v service > /dev/null 2>&1; then \
 		sudo service postgresql start || exit 1; \
@@ -70,6 +68,9 @@ start:
 		echo "PostgreSQL service failed to start.";\
 	fi
 
+# Start the Go application
+start:
+	make start-postgres || exit 1
 	@echo "Starting the Go application..."
 	go run main.go
 
