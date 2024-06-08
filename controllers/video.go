@@ -54,18 +54,17 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 						title,
 						description,
 						upload_initiate_time,
-						upload_status,
-						upload_end_time
+						upload_status
 					) 
 				VALUES 
-					($1,$2,$3,$4,$5,$6)
+					($1,$2,$3,$4,$5)
 		`)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0, time.Now())
+		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0)
 
 		if err != nil {
 			log.Fatal(err)
