@@ -57,7 +57,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 						upload_status
 					) 
 				VALUES 
-					(?,?,?,?,?);
+					($1,$2,$3,$4,$5)
 		`)
 
 		if err != nil {
@@ -192,17 +192,22 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		FROM
 			videos
 		WHERE
-			video_id=?
+			video_id=$1;
 	`)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer detailsQuery.Close()
+
 	var title, description string
 	err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	log.Println("Video ID: " + video_id)
 	log.Println("Title: " + title)
 	log.Println("Description: " + description)
