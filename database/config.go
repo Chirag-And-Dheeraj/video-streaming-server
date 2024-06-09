@@ -2,34 +2,46 @@ package database
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
 func Connect() *sql.DB {
-	log.Println("Initializing SQLite database...")
-	db, err := sql.Open("sqlite3", "database.db")
+	log.Println("Initializing PostgreSQL database...")
+
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port, user, password, dbname)
+
+	db, err := sql.Open("postgres", psqlInfo)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	table, err := db.Prepare(`CREATE TABLE IF NOT EXISTS videos
-	(
+	query, err := db.Prepare(`CREATE TABLE IF NOT EXISTS videos (
 		video_id TEXT PRIMARY KEY,
-		title TEXT,
+		title TEXT NOT NULL,
 		description TEXT,
-		upload_initiate_time TEXT,
-		upload_status INTEGER,
-		upload_end_time TEXT
-	)`)
+		upload_initiate_time TIMESTAMP,
+		upload_status SMALLINT CHECK (upload_status IN (0, 1)),
+		upload_end_time TIMESTAMP
+	);`)
 
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer table.Close()
-	table.Exec()
+
+	defer query.Close()
+	query.Exec()
 
 	log.Println("Database initialized.")
 	return db

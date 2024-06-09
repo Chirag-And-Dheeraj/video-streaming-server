@@ -13,11 +13,16 @@ However, expect things to change in the upcoming versions while we shape this in
 - Install the `make` utility because we have created a **_[Makefile](Makefile)_** to ease the setup
 - Clone the repository
 - Create an **_[Appwrite storage bucket](https://appwrite.io/docs/products/storage)_**
-  - Make sure that you make a note of `APPWRITE_KEY`, `APPWRITE_PROJECT_ID` and the `BUCKET_ID`
-- Create a `.env` file using **_[template.env](template.env)_** as a reference.
+  - Make sure that you make a note of `APPWRITE_KEY`, `APPWRITE_PROJECT_ID` and the `BUCKET_ID`.
 - Now we are moving to the dependency installation steps.
-- This project needs `go version go1.22.2` and `ffmpeg` utility.
+- This project needs `go version go1.22.2`, `ffmpeg` utility and `psql (PostgreSQL) 16.3` database.
 - To install these, and the Go dependencies, run `make install`.
+  - The `make install` takes care of installing go, ffmpeg and psql dependencies.
+  - Run `make start-postgres` to start the postgres service.
+  - Create a database user by running this command `sudo -u postgres createuser -s username_here -P`
+  - `-P` will prompt for a password.
+  - Enter the `psql` shell by running this command `sudo -u postgres psql` and create a database by running `CREATE DATABASE <database_name>;`.
+  - Create a `.env` file using **_[template.env](template.env)_** as a reference.
 - Once the dependencies are installed successfully, run `make cleanstart`.
 - This command will create all the necessary folders and start the server on `http://127.0.0.1:8000`
 - If you just want to run the server, run: `make start`
