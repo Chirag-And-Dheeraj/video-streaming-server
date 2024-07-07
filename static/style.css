@@ -148,3 +148,7 @@ main section textarea,
   margin: 1.5em;
 }
 
+#form-section {
+  display: block;
+}
+
