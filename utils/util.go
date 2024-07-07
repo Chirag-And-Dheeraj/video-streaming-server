@@ -159,7 +159,6 @@ func UploadToAppwrite(folderName string, db *sql.DB) {
 			log.Fatal(err)
 		}
 		defer response.Body.Close()
-		log.Println(response.StatusCode)
 		if response.StatusCode != 201 {
 			body, err := io.ReadAll(response.Body)
 			if err != nil {
