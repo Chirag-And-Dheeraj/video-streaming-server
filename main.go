@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"regexp"
@@ -22,11 +24,13 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	method := r.Method
 
 	if method == "POST" {
+		log.Println("POST: " + path)
 		controllers.UploadVideo(w, r, db)
 	} else if method == "GET" {
 		log.Println("GET: " + path)
 
 		if path == "/video/" {
+			log.Println("Get all video details")
 			controllers.GetVideos(w, r, db)
 		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
 			log.Println("Get video details")
@@ -39,16 +43,17 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Print("Segment Request:")
 			log.Println(regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/[a-zA-B0-9_-]+.ts/?$", path))
 			controllers.GetTSFiles(w, r, db)
+		} else {
+			response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
+			http.Error(w, response, http.StatusNotFound)
 		}
 	}
 }
 
-var validPath = regexp.MustCompile("^/(upload)/([a-zA-Z0-9]+)$")
-
 func homePageHandler(w http.ResponseWriter, r *http.Request) {
-
 	if r.URL.Path != "/" {
-		return
+		response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
+		http.Error(w, response, http.StatusNotFound)
 	} else if r.Method == "GET" {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/index.html"

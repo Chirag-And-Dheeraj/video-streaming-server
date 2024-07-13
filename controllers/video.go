@@ -67,9 +67,11 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			http.Error(w, "Error processing file", http.StatusInternalServerError)
+			return
 		} else {
-			log.Print("Database record created.")
+			log.Println("Database record created.")
 		}
 	}
 
@@ -81,15 +83,15 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if isFirstChunk == "true" {
 		tmpFile, err = os.Create("./video/" + serverFileName)
 		if err != nil {
-			log.Println("Error creating file:", err)
-			http.Error(w, "Error creating file", http.StatusInternalServerError)
+			log.Println("Error creating a temp file on the server:", err)
+			http.Error(w, "Error processing file", http.StatusInternalServerError)
 			return
 		}
 	} else {
 		tmpFile, err = os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
-			log.Println("Error opening file:", err)
-			http.Error(w, "Error opening file", http.StatusInternalServerError)
+			log.Println("Error opening the temp file on the server for appending chunks:", err)
+			http.Error(w, "Error processing file", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -97,8 +99,8 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	_, err = tmpFile.Write(d)
 
 	if err != nil {
-		log.Println("Error writing to file:", err)
-		http.Error(w, "Error writing to file", http.StatusInternalServerError)
+		log.Println("Error appending chunks to file:", err)
+		http.Error(w, "Error processing file", http.StatusInternalServerError)
 		return
 	}
 
@@ -106,13 +108,14 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println("Error getting file info:", err)
-		http.Error(w, "Error getting file info", http.StatusInternalServerError)
+		http.Error(w, "Error processing file", http.StatusInternalServerError)
 		return
 	}
 
 	if fileInfo.Size() == int64(fileSize) {
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("File received completely."))
+
 		log.Println("Received all chunks for: " + serverFileName)
 		log.Println("Breaking the video into .ts files.")
 
@@ -126,6 +129,8 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
 		} else {
 			log.Println("Error breaking " + fileName + " into .ts files.")
+			http.Error(w, "Error processing file", http.StatusInternalServerError)
+			return
 		}
 	} else {
 		w.WriteHeader(http.StatusPartialContent)
@@ -145,7 +150,9 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	`)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println("Error running select query for all video records.")
+		http.Error(w, "Error retreiving videos", http.StatusInternalServerError)
+		return
 	}
 
 	defer rows.Close()
@@ -162,7 +169,9 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		err := rows.Scan(&id, &title, &description)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Println("Error scanning rows")
+			http.Error(w, "Error retreiving records", http.StatusInternalServerError)
+			return
 		}
 
 		record := Video{
@@ -177,9 +186,12 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	recordsJSON, err := json.Marshal(records)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Error retreiving records", http.StatusInternalServerError)
 	} else {
-		fmt.Fprint(w, string(recordsJSON))
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(recordsJSON))
 	}
 }
 
@@ -196,7 +208,8 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	`)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Error retreiving record", http.StatusInternalServerError)
 	}
 
 	defer detailsQuery.Close()
@@ -204,13 +217,18 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var title, description string
 	err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
 
+
 	if err != nil {
-		log.Fatal(err)
+		if err == sql.ErrNoRows {
+			log.Println(err)
+			http.Error(w, "Video record not found", http.StatusNotFound)
+			return
+		}
+		log.Println(err)
+		http.Error(w, "Error retreiving record", http.StatusInternalServerError)
+		return
 	}
 
-	log.Println("Video ID: " + video_id)
-	log.Println("Title: " + title)
-	log.Println("Description: " + description)
 	videoDetails := &Video{
 		ID:          video_id,
 		Title:       title,
@@ -219,10 +237,13 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoDetailsJSON, err := json.Marshal(videoDetails)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
+	} else {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(videoDetailsJSON))
 	}
-
-	fmt.Fprint(w, string(videoDetailsJSON))
 }
 
 func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -235,7 +256,9 @@ func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	request, err := http.NewRequest("GET", getManifestFile, nil)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
+		return
 	}
 
 	request.Header.Set("Content-Type", "application/json")
@@ -248,18 +271,28 @@ func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	response, err := client.Do(request)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
+		return
 	}
 
 	defer response.Body.Close()
 
+	if response.StatusCode == 404 {
+		http.Error(w, "Video record not found", http.StatusNotFound)
+		return
+	}
+
 	bodyBytes, err := io.ReadAll(response.Body)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/x-mpegURL")
+	w.WriteHeader(http.StatusOK)
 	w.Write(bodyBytes)
 }
 
@@ -278,7 +311,9 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	request, err := http.NewRequest("GET", getSegmentFile, nil)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Error Streaming Video", http.StatusInternalServerError)
+		return
 	}
 
 	request.Header.Set("Content-Type", "application/json")
@@ -290,16 +325,26 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	response, err := client.Do(request)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Error Streaming Video", http.StatusInternalServerError)
+		return
 	}
 	defer response.Body.Close()
+
+	if response.StatusCode == 404 {
+		http.Error(w, "Video chunk not found", http.StatusNotFound)
+		return
+	}
 
 	bodyBytes, err := io.ReadAll(response.Body)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		http.Error(w, "Error Streaming Video", http.StatusInternalServerError)
+		return
 	}
 
 	w.Header().Set("Content-Type", "video/MP2T")
+	w.WriteHeader(http.StatusOK)
 	w.Write(bodyBytes)
 }

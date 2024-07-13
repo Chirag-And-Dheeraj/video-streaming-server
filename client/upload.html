@@ -25,31 +25,45 @@
     </header>
     <main>
       <h1 class="page-title special-red">Upload</h1>
-      <section id="file-form">
-        <label for="title">Title</label>
-        <input
-          id="title"
-          type="text"
-          name="title"
-          placeholder="The Fast and The Furious"
-        />
-        <label class="block" for="description">Description</label>
-        <textarea
-          id="description"
-          type="text"
-          name="description"
-          placeholder="A movie about car racing."
-        ></textarea>
-        <label for="video">Drop that video...</label>
-        <input id="video" type="file" name="video" accept="video/*" />
-        <br />
-
-        <!-- <label for="thumbnail">Thumbnail</label>
-        <input id="thumbnail" type="file" name="thumbnail" accept="image/*" /> -->
-        <br />
-        <button id="uploadVideoButton">Submit</button>
-
-        <div id="divOutput"></div>
+      <section id="form-section">
+        <form id="file-form">
+          <label for="title">Title</label>
+          <input
+            id="title"
+            type="text"
+            name="title"
+            placeholder="The Fast and The Furious"
+            required
+          />
+          <br />
+  
+          <p id="titleError" class="special-red" style="display: none;"></p>
+  
+          <br />
+          <label class="block" for="description">Description</label>
+          <textarea
+            id="description"
+            type="text"
+            name="description"
+            placeholder="A movie about car racing."
+            required
+          ></textarea>
+          <br />
+  
+          <p id="descriptionError" class="special-red" style="display: none;"></p>
+  
+          <br />
+          <label for="video">Drop that video...</label>
+          <input id="video" type="file" name="video" accept=".mp4" />
+          <br />
+  
+          <p id="fileError" class="special-red" style="display: none;"></p>
+  
+          <br />
+          <button id="uploadVideoButton" type="submit">Submit</button>
+  
+          <div id="divOutput"></div>
+        </form>
       </section>
     </main>
     <script src="../static/upload.js"></script>
