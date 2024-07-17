@@ -1,0 +1,31 @@
+version: '3.9'
+
+services:
+  dekho:
+    container_name: dekho
+    build: .
+    environment:
+      DB_HOST: dekho-postgres
+      DB_USER: chirag
+      DB_NAME: dekho
+      DB_PASSWORD: chiraG@1234
+      DB_PORT: 5432
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      - dekho-postgres
+
+  dekho-postgres:
+    container_name: dekho-postgres
+    image: postgres
+    environment:
+      POSTGRES_USER: chirag
+      POSTGRES_DB: dekho
+      POSTGRES_PASSWORD: chiraG@1234
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata: {}
