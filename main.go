@@ -109,5 +109,5 @@ func initServer() {
 func main() {
 	initServer()
 	log.Println("Server is running on http://127.0.0.1:8000")
-	log.Fatal(http.ListenAndServe("127.0.0.1:8000", nil))
+	log.Fatal(http.ListenAndServe(":8000", nil))
 }
