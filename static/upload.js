@@ -76,8 +76,8 @@ fileForm.addEventListener("submit", (e) => {
                         "file-name": fileName,
                         "file-size": ev.target.result.byteLength,
                         "first-chunk": firstChunk,
-                        title: title.value,
-                        description: description.value,
+                        title: title,
+                        description: description,
                     },
                     body: chunk,
                 });

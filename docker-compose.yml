@@ -4,12 +4,14 @@ services:
   dekho:
     container_name: dekho
     build: .
+    env_file:
+      - ".env"
     environment:
-      DB_HOST: dekho-postgres
-      DB_USER: chirag
-      DB_NAME: dekho
-      DB_PASSWORD: chiraG@1234
-      DB_PORT: 5432
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: ${DB_PORT}
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -18,10 +20,12 @@ services:
   dekho-postgres:
     container_name: dekho-postgres
     image: postgres
+    env_file:
+      - ".env"
     environment:
-      POSTGRES_USER: chirag
-      POSTGRES_DB: dekho
-      POSTGRES_PASSWORD: chiraG@1234
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
