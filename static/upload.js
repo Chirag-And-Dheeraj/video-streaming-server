@@ -40,7 +40,7 @@ fileForm.addEventListener("submit", (e) => {
     fileError.style.display = "none";
 
     fileReader.onload = async (ev) => {
-        const CHUNK_SIZE = 20000000;
+        const CHUNK_SIZE = 50000;
         const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
         console.log(chunkCount);
         console.log("Read successfully");

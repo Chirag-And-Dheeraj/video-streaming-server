@@ -13,7 +13,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_PORT: ${DB_PORT}
     ports:
-      - "127.0.0.1:8000:8000"
+      - "${PORT}:${PORT}"
     depends_on:
       - dekho-postgres
 
@@ -27,7 +27,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
