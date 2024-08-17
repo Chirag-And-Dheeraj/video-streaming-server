@@ -1,0 +1,35 @@
+version: '3.9'
+
+services:
+  dekho:
+    container_name: dekho
+    build: .
+    env_file:
+      - ".env"
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PORT: ${DB_PORT}
+    ports:
+      - "${PORT}:${PORT}"
+    depends_on:
+      - dekho-postgres
+
+  dekho-postgres:
+    container_name: dekho-postgres
+    image: postgres
+    env_file:
+      - ".env"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata: {}

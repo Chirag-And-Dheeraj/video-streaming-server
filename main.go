@@ -6,6 +6,7 @@ import (
 	"html"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"video-streaming-server/controllers"
 	"video-streaming-server/database"
@@ -108,6 +109,8 @@ func initServer() {
 
 func main() {
 	initServer()
-	log.Println("Server is running on http://127.0.0.1:8000")
-	log.Fatal(http.ListenAndServe("127.0.0.1:8000", nil))
+	addr := os.Getenv("ADDR")
+	port := os.Getenv("PORT")
+	log.Println("Server is listening on http://127.0.0.1:8000")
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", addr, port), nil))
 }

@@ -1,5 +1,4 @@
 window.onload = async () => {
-  console.log("Page loaded,...");
   const response = await fetch("http://127.0.0.1:8000/video", {
     method: "GET",
   });
