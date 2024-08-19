@@ -10,7 +10,13 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@200&family=Megrim&family=Mystery+Quest&display=swap"
       rel="stylesheet"
     />
+    <script>
+      window.ENV = {
+          API_URL: window.location.hostname === "127.0.0.1" ? "http://127.0.0.1:8000" : `https://${window.location.hostname}`
+      };
+  </script>
     <link rel="stylesheet" href="../static/style.css" />
+
     <title>Dekho: Your very own - Video Storage Service</title>
   </head>
   <body>

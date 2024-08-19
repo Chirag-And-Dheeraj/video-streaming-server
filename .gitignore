@@ -1,4 +1,6 @@
 .env
+.env.dev
+.env.prod
 video/
 segments/
 database.db
