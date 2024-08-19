@@ -102,12 +102,10 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("Video received completely and is now being processed."))
 		go utils.PostUploadProcessFile(serverFileName, fileName, tmpFile, db)
-		return
 
 	} else {
 		w.WriteHeader(http.StatusPartialContent)
 		w.Write([]byte("Receiving chunks of the video."))
-		return
 	}
 }
 

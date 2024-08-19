@@ -230,9 +230,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 		closeVideoFile(tmpFile)
 		uploadToAppwrite(fileName, db)
 		log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
-		return
 	} else {
 		log.Println("Error breaking " + fileName + " into .ts files.")
-		return
 	}
 }
