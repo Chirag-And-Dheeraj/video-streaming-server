@@ -11,6 +11,11 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="../static/style.css" />
+    <script>
+      window.ENV = {
+          API_URL: window.location.hostname === "127.0.0.1" ? "http://127.0.0.1:8000" : `https://${window.location.hostname}`
+      };
+  </script>
     <title>Dekho: Your very own - Large File Storage</title>
   </head>
   <body>

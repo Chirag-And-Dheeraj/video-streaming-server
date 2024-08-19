@@ -68,7 +68,7 @@ fileForm.addEventListener("submit", (e) => {
                     firstChunk = true;
                 }
                 // reason for await is we want to wait for server's response and not flood the backend with all requests.
-                const response = await fetch("http://127.0.0.1:8000/video/", {
+                const response = await fetch(`${window.ENV.API_URL}/video/`, {
                     method: "POST",
                     headers: {
                         "content-type": "application/octet-stream",
