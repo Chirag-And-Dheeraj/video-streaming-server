@@ -41,7 +41,7 @@ func LoadEnvVars() {
 	log.Println("Environment variables set.")
 }
 
-func BreakFile(videoPath string, fileName string) bool {
+func breakFile(videoPath string, fileName string) bool {
 	// ffmpeg -y -i DearZindagi.mkv -codec copy -map 0 -f segment -segment_time 7 -segment_format mpegts -segment_list DearZindagi_index.m3u8 -segment_list_type m3u8 ./segment_no_%d.ts
 
 	log.Println("Inside BreakFile function.")
@@ -75,11 +75,11 @@ func ResumeUploadIfAny(db *sql.DB) {
 	}
 
 	for _, folder := range folders {
-		UploadToAppwrite(folder.Name(), db)
+		uploadToAppwrite(folder.Name(), db)
 	}
 }
 
-func UploadToAppwrite(folderName string, db *sql.DB) {
+func uploadToAppwrite(folderName string, db *sql.DB) {
 	files, err := os.ReadDir(fmt.Sprintf("segments/%s", folderName))
 
 	if err != nil {
@@ -98,7 +98,7 @@ func UploadToAppwrite(folderName string, db *sql.DB) {
 	var count int = -1
 	for idx, file := range files {
 		fileToUpload, err := os.ReadFile(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
-		
+
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -203,5 +203,34 @@ func UploadToAppwrite(folderName string, db *sql.DB) {
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+}
+
+func closeVideoFile(tmpFile *os.File) {
+	err := tmpFile.Close()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = os.Remove(tmpFile.Name())
+
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.File, db *sql.DB) {
+	log.Println("Received all chunks for: " + serverFileName)
+	log.Println("Breaking the video into .ts files.")
+	breakResult := breakFile(("./video/" + serverFileName), fileName)
+	if breakResult {
+		log.Println("Successfully broken " + fileName + " into .ts files.")
+		log.Println("Deleting the original file from server.")
+		closeVideoFile(tmpFile)
+		uploadToAppwrite(fileName, db)
+		log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
+	} else {
+		log.Println("Error breaking " + fileName + " into .ts files.")
 	}
 }

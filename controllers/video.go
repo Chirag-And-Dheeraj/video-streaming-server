@@ -16,20 +16,6 @@ import (
 	"video-streaming-server/utils"
 )
 
-func closeVideoFile(tmpFile *os.File) {
-	err := tmpFile.Close()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = os.Remove(tmpFile.Name())
-
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
 func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	fileName := r.Header.Get("file-name")
 	isFirstChunk := r.Header.Get("first-chunk")
@@ -114,27 +100,12 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if fileInfo.Size() == int64(fileSize) {
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("File received completely."))
+		w.Write([]byte("Video received completely and is now being processed."))
+		go utils.PostUploadProcessFile(serverFileName, fileName, tmpFile, db)
 
-		log.Println("Received all chunks for: " + serverFileName)
-		log.Println("Breaking the video into .ts files.")
-
-		breakResult := utils.BreakFile(("./video/" + serverFileName), fileName)
-
-		if breakResult {
-			log.Println("Successfully broken " + fileName + " into .ts files.")
-			log.Println("Deleting the original file from server.")
-			closeVideoFile(tmpFile)
-			utils.UploadToAppwrite(fileName, db)
-			log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
-		} else {
-			log.Println("Error breaking " + fileName + " into .ts files.")
-			http.Error(w, "Error processing file", http.StatusInternalServerError)
-			return
-		}
 	} else {
 		w.WriteHeader(http.StatusPartialContent)
-		w.Write([]byte("Receiving chunks of the file."))
+		w.Write([]byte("Receiving chunks of the video."))
 	}
 }
 
@@ -146,8 +117,9 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			title,
 			description
 		FROM
-			videos;
-	`)
+			videos
+		WHERE
+			upload_status=1;`)
 
 	if err != nil {
 		log.Println("Error running select query for all video records.")
@@ -216,7 +188,6 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	var title, description string
 	err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
-
 
 	if err != nil {
 		if err == sql.ErrNoRows {
