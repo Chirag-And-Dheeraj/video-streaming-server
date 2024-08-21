@@ -6,3 +6,4 @@ segments/
 database.db
 main.exe
 .vscode/
+tmp/
