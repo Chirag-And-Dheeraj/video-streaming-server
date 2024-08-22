@@ -4,6 +4,6 @@
 video/
 segments/
 database.db
-main.exe
+main
 .vscode/
 tmp/
