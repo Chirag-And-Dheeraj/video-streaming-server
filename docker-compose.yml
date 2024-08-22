@@ -16,6 +16,8 @@ services:
       - "${PORT}:${PORT}"
     depends_on:
       - dekho-postgres
+    volumes:
+      - ./:/app
 
   dekho-postgres:
     container_name: dekho-postgres
