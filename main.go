@@ -48,6 +48,9 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
 			http.Error(w, response, http.StatusNotFound)
 		}
+	} else if method == "DELETE" {
+		log.Println("DELETE: " + path)
+		controllers.DeleteVideo(w, r, db)
 	}
 }
 

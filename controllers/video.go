@@ -319,3 +319,12 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.WriteHeader(http.StatusOK)
 	w.Write(bodyBytes)
 }
+
+func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	body, _ := io.ReadAll(r.Body)
+
+	video_id := string(body)
+
+	log.Println("Want to delete this video")
+	log.Println(video_id)
+}
