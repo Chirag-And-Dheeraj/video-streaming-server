@@ -112,7 +112,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	log.Println("Querying the database now for a list of videos...")
 	rows, err := db.Query(`
-		SELECT 
+		SELECT
 			video_id,
 			title,
 			description
@@ -220,51 +220,16 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoId := strings.Split(r.URL.Path[1:], "/")[1]
 
-	log.Println("Video ID: " + videoId)
-
-	getManifestFile := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/" + videoId + "/view"
-
-	request, err := http.NewRequest("GET", getManifestFile, nil)
+	file, err := utils.GetMFile(w, videoId)
 
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
-		return
+	} else {
+		w.Header().Set("Content-Type", "application/x-mpegURL")
+		w.WriteHeader(http.StatusOK)
+		w.Write(file)
 	}
-
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
-
-	client := &http.Client{}
-
-	response, err := client.Do(request)
-
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
-		return
-	}
-
-	defer response.Body.Close()
-
-	if response.StatusCode == 404 {
-		http.Error(w, "Video record not found", http.StatusNotFound)
-		return
-	}
-
-	bodyBytes, err := io.ReadAll(response.Body)
-
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/x-mpegURL")
-	w.WriteHeader(http.StatusOK)
-	w.Write(bodyBytes)
 }
 
 func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
@@ -323,8 +288,90 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	body, _ := io.ReadAll(r.Body)
 
-	video_id := string(body)
+	videoId := string(body)
 
 	log.Println("Want to delete this video")
-	log.Println(video_id)
+	log.Println(videoId)
+
+	fileBytes, _ := utils.GetMFile(w, videoId)
+	file := string(fileBytes)
+	lines := strings.Split(file, "\n")
+
+	deleteUrl := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/"
+
+	// iterate over this string, take file names, split by ., hash it, get the fileId and delete it using appwrite api
+	for i:=0; i<len(lines); i++ {
+		if strings.HasSuffix(lines[i], ".ts") {
+			fileName := strings.Split(lines[i], ".")[0]
+			fileId := utils.GetFileId(fileName)
+
+			request, err := http.NewRequest("DELETE", deleteUrl + fileId, nil)
+
+			if err != nil {
+				log.Println(err)
+				http.Error(w, "Error Deleting Chunk", http.StatusInternalServerError)
+				return
+			}
+		
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+			request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+			request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+		
+			client := &http.Client{}
+		
+			response, err := client.Do(request)
+			if err != nil {
+				log.Println(err)
+				http.Error(w, "Error Deleting Chunk", http.StatusInternalServerError)
+				return
+			}
+			defer response.Body.Close()
+		}
+	}
+
+	// delete m3u8 after all ts files are deleted
+	request, err := http.NewRequest("DELETE", deleteUrl + videoId, nil)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
+		return
+	}
+	defer response.Body.Close()
+
+
+	// delete record from db
+
+	query, err := db.Prepare(`DELETE FROM videos WHERE video_id=$1`)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = query.Exec(videoId)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error deleting record", http.StatusInternalServerError)
+		return
+	}
+	
+	log.Println("Database record deleted.")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusNoContent)
 }

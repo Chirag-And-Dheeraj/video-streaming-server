@@ -113,9 +113,7 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 		if fileComps[1] == "m3u8" {
 			fileId = fileComps[0]
 		} else {
-			hashChecksum := sha1.New()
-			hashChecksum.Write([]byte(fileComps[0]))
-			fileId = fmt.Sprintf("%x", hashChecksum.Sum(nil))[:36]
+			fileId = GetFileId(fileComps[0])
 		}
 
 		err = writer.WriteField("fileId", fileId)
@@ -233,4 +231,52 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 	} else {
 		log.Println("Error breaking " + fileName + " into .ts files.")
 	}
+}
+
+func GetMFile(w http.ResponseWriter, videoId string) ([]byte, error) {
+	log.Println("Video ID: " + videoId)
+
+	getManifestFile := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/" + videoId + "/view"
+
+	request, err := http.NewRequest("GET", getManifestFile, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+	
+	if response.StatusCode == 404 {
+		http.Error(w, "Video record not found", http.StatusNotFound)
+		return nil, err
+	}
+
+	bodyBytes, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return bodyBytes, nil
+}
+
+func GetFileId(fileName string) string {
+	hashChecksum := sha1.New()
+	hashChecksum.Write([]byte(fileName))
+	fileId := fmt.Sprintf("%x", hashChecksum.Sum(nil))[:36]
+
+	return fileId
 }
