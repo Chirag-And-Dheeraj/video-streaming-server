@@ -290,17 +290,13 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	videoId := string(body)
 
-	log.Println("Want to delete this video")
-	log.Println(videoId)
-
 	fileBytes, _ := utils.GetMFile(w, videoId)
 	file := string(fileBytes)
 	lines := strings.Split(file, "\n")
 
 	deleteUrl := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/"
 
-	// iterate over this string, take file names, split by ., hash it, get the fileId and delete it using appwrite api
-	for i:=0; i<len(lines); i++ {
+	for i := 0; i < len(lines); i++ {
 		if strings.HasSuffix(lines[i], ".ts") {
 			fileName := strings.Split(lines[i], ".")[0]
 			fileId := utils.GetFileId(fileName)
@@ -330,7 +326,8 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		}
 	}
 
-	// delete m3u8 after all ts files are deleted
+	log.Println("Deleted all .ts files...")
+
 	request, err := http.NewRequest("DELETE", deleteUrl + videoId, nil)
 
 	if err != nil {
@@ -354,8 +351,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 	defer response.Body.Close()
 
-
-	// delete record from db
+	log.Println("Deleted .m3u8 file...")
 
 	query, err := db.Prepare(`DELETE FROM videos WHERE video_id=$1`)
 
@@ -370,8 +366,9 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		http.Error(w, "Error deleting record", http.StatusInternalServerError)
 		return
 	}
-	
-	log.Println("Database record deleted.")
+
+	log.Println("Deleted database record...")
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusNoContent)
 }
