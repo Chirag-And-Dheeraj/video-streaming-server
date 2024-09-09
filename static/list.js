@@ -17,7 +17,7 @@ window.onload = async () => {
       let videoTitle = document.createElement("h2");
       let videoDescription = document.createElement("p");
       let videoLink = document.createElement("a");
-      var deleteLink = document.createElement("a");
+      let deleteLink = document.createElement("a");
 
       videoLink.setAttribute(
         "href",
@@ -45,24 +45,29 @@ window.onload = async () => {
       videoListRow.appendChild(deleteLink)
 
       videoListSection.appendChild(videoListRow);
+
+
+      deleteLink.addEventListener('click', async (e) => {
+        e.preventDefault()
+        console.log("Delete Video")
+      
+        const video_id = deleteLink.dataset.id
+        console.log(video_id)
+        deleteLink.textContent = "Deleting..."
+  
+        const response = await fetch(`${window.ENV.API_URL}/video`, {
+          method: "DELETE",
+          body: video_id
+        });
+  
+        if(response.status === 204) {
+          deleteLink.textContent = "Deleted"
+        } else {
+          deleteLink.textContent = "Error while deleting"
+        }
+  
+        location.reload()
+      })
     }
-
-    deleteLink.addEventListener('click', async (e) => {
-      e.preventDefault()
-      console.log("Delete Video")
-    
-      const video_id = deleteLink.dataset.id
-      console.log(video_id)
-      deleteLink.textContent = "Deleting..."
-
-      const response = await fetch(`${window.ENV.API_URL}/video`, {
-        method: "DELETE",
-        body: video_id
-      });
-
-      deleteLink.textContent = "Deleted"
-
-      location.reload()
-    })
   }
 };
