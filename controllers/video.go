@@ -286,11 +286,24 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	body, _ := io.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
+		return
+	}
 
 	videoId := string(body)
 
-	fileBytes, _ := utils.GetMFile(w, videoId)
+	fileBytes, err := utils.GetMFile(w, videoId)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
+		return
+	}
+
 	file := string(fileBytes)
 	lines := strings.Split(file, "\n")
 
@@ -300,7 +313,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		if strings.HasSuffix(lines[i], ".ts") {
 			fileName := strings.Split(lines[i], ".")[0]
 			fileId := utils.GetFileId(fileName)
-
+			
 			request, err := http.NewRequest("DELETE", deleteUrl + fileId, nil)
 
 			if err != nil {
