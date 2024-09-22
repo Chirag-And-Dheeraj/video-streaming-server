@@ -12,20 +12,32 @@
     />
     <script>
       window.ENV = {
-          API_URL: window.location.hostname === "127.0.0.1" ? "http://127.0.0.1:8000" : `https://${window.location.hostname}`
+        API_URL:
+          window.location.hostname === "127.0.0.1"
+            ? "http://127.0.0.1:8000"
+            : `https://${window.location.hostname}`,
       };
-  </script>
+    </script>
     <link rel="stylesheet" href="../static/style.css" />
 
     <title>Dekho: Your very own - Video Storage Service</title>
   </head>
+
   <body>
     <header>
-      <a href="/"><h1>Dekho</h1></a>
+      <a href="/">
+        <h1>Dekho</h1>
+      </a>
       <nav>
         <ul>
+          {{if .IsLoggedIn}}
           <li><a class="special-blue" href="/upload">Upload</a></li>
-          <li><a class="special-red" href="/list">List Files</a></li>
+          <li><a class="special-blue" href="/list">List Files</a></li>
+          <li><a class="special-red" onclick="logout()">Logout</a></li>
+          {{else}}
+          <li><a class="special-blue" href="/login">Login</a></li>
+          <li><a class="special-blue" href="/register">Register</a></li>
+          {{end}}
         </ul>
       </nav>
     </header>
@@ -52,5 +64,6 @@
       </section>
     </main>
     <script src="../static/index.js"></script>
+    <script src="../static/script.js"></script>
   </body>
 </html>

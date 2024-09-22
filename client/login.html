@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@200&family=Megrim&family=Mystery+Quest&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      window.ENV = {
+        API_URL:
+          window.location.hostname === "127.0.0.1"
+            ? "http://127.0.0.1:8000"
+            : `https://${window.location.hostname}`,
+      };
+    </script>
+    <link rel="stylesheet" href="../static/style.css" />
+    <title>Dekho: Login page</title>
+  </head>
+
+  <body>
+    <header>
+      <a href="/">
+        <h1>Dekho</h1>
+      </a>
+      <nav>
+        <ul>
+          <li><a class="special-blue" href="/register">Register</a></li>
+        </ul>
+      </nav>
+    </header>
+    <main>
+      <h1 class="page-title special-red">Login</h1>
+      <section id="form-section">
+        <form id="login-form">
+          <label for="email">Email</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            placeholder="tomriddle@hogwarts.com"
+            required
+          />
+          <br />
+          <p id="emailError" class="special-red" style="display: none"></p>
+          <br />
+          <label for="password">Password</label>
+          <input
+            id="password"
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+          />
+          <br />
+          <p id="passwordError" class="special-red" style="display: none"></p>
+
+          <br />
+          <button id="loginButton" class="primaryButton" type="submit">
+            Login
+          </button>
+          <div id="divOutput"></div>
+        </form>
+      </section>
+    </main>
+    <script src="../static/login.js"></script>
+  </body>
+</html>

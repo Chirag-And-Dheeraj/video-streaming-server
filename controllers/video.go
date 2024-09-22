@@ -12,16 +12,24 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"video-streaming-server/services"
 	. "video-streaming-server/types"
 	"video-streaming-server/utils"
 )
 
 // @desc Create new video resource
 // @route POST /video
-func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, userService services.UserService) {
 	fileName := r.Header.Get("file-name")
 	isFirstChunk := r.Header.Get("first-chunk")
 	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
+	user, err := utils.GetUserFromRequest(r)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "User not logged in.", http.StatusUnauthorized)
+		return
+	}
 	sizeLimit, _ := strconv.Atoi(os.Getenv("FILE_SIZE_LIMIT"))
 
 	if fileSize > sizeLimit {
@@ -40,6 +48,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		log.Println("Title: ", title)
 		log.Println("Description: ", description)
 		log.Println("Creating a database record...")
+		log.Println("User is: ", user.ID)
 
 		insertStatement, err := db.Prepare(`
 			INSERT INTO 
@@ -50,7 +59,8 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 						description,
 						upload_initiate_time,
 						upload_status,
-						delete_flag
+						delete_flag,
+						user_id
 					) 
 				VALUES 
 					($1,$2,$3,$4,$5,$6)
@@ -60,7 +70,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Fatal(err)
 		}
 
-		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0, 0)
+		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0, 0, user.ID)
 
 		if err != nil {
 			log.Println(err)
@@ -74,7 +84,6 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	d, _ := io.ReadAll(r.Body)
 
 	var tmpFile *os.File
-	var err error
 
 	if isFirstChunk == "true" {
 		tmpFile, err = os.Create("./video/" + serverFileName)
@@ -123,7 +132,15 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 // @route GET /video
 func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	log.Println("Querying the database now for a list of videos...")
-	rows, err := db.Query(`
+	user, err := utils.GetUserFromRequest(r)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "User not logged in.", http.StatusUnauthorized)
+		return
+	}
+
+	getUserVideosQuery, err := db.Prepare(`
 		SELECT
 			video_id,
 			title,
@@ -132,12 +149,21 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			videos
 		WHERE
 			upload_status=1
-			AND delete_flag=0;
+		AND 
+			delete_flag=0;
+		AND
+			user_id=$1;
 	`)
 
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	rows, err := getUserVideosQuery.Query(user.ID)
+
+	if err != nil {
 		log.Println("Error running select query for all video records.")
-		http.Error(w, "Error retreiving videos", http.StatusInternalServerError)
+		http.Error(w, "Error retrieving videos", http.StatusInternalServerError)
 		return
 	}
 
@@ -186,24 +212,35 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoId := r.URL.Path[len("/video/"):]
 	log.Println("Details of " + videoId + " requested.")
+
+	user, err := utils.GetUserFromRequest(r)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "User not logged in.", http.StatusUnauthorized)
+		return
+	}
+
 	detailsQuery, err := db.Prepare(`
 		SELECT
 			title, description
 		FROM
 			videos
 		WHERE
-			video_id=$1;
+			video_id=$1
+		AND
+			user_id=$2;
 	`)
 
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Error retreiving record", http.StatusInternalServerError)
+		http.Error(w, "Error retrieving record", http.StatusInternalServerError)
 	}
 
 	defer detailsQuery.Close()
 
 	var title, description string
-	err = detailsQuery.QueryRow(videoId).Scan(&title, &description)
+	err = detailsQuery.QueryRow(videoId, user.ID).Scan(&title, &description)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -212,7 +249,7 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			return
 		}
 		log.Println(err)
-		http.Error(w, "Error retreiving record", http.StatusInternalServerError)
+		http.Error(w, "Error retrieving record", http.StatusInternalServerError)
 		return
 	}
 
