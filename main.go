@@ -102,7 +102,14 @@ func setUpRoutes(db *sql.DB) {
 func initServer() {
 	log.Println("Initializing server...")
 	utils.LoadEnvVars()
-	db := database.Connect()
+	dbConfig, err := database.NewDBConfig()
+	if err != nil {
+		log.Fatalf("Failed to load database config: %v", err)
+	}
+	db, err := database.Connect(dbConfig)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
 	setUpRoutes(db)
 	utils.ResumeUploadIfAny(db)
 }
