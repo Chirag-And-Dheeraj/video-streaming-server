@@ -113,9 +113,7 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 		if fileComps[1] == "m3u8" {
 			fileId = fileComps[0]
 		} else {
-			hashChecksum := sha1.New()
-			hashChecksum.Write([]byte(fileComps[0]))
-			fileId = fmt.Sprintf("%x", hashChecksum.Sum(nil))[:36]
+			fileId = GetFileId(fileComps[0])
 		}
 
 		err = writer.WriteField("fileId", fileId)
@@ -177,8 +175,8 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 	log.Println("Updating upload status in database record...")
 	updateStatement, err := db.Prepare(`
 	UPDATE
-		videos 
-	SET 
+		videos
+	SET
 		upload_status=$1,
 		upload_end_time=$2
 		WHERE
@@ -233,4 +231,140 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 	} else {
 		log.Println("Error breaking " + fileName + " into .ts files.")
 	}
+}
+
+func GetManifestFile(w http.ResponseWriter, videoId string) ([]byte, error) {
+	log.Println("Video ID: " + videoId)
+
+	getManifestFile := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/" + videoId + "/view"
+
+	request, err := http.NewRequest("GET", getManifestFile, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer response.Body.Close()
+
+	if response.StatusCode == 404 {
+		http.Error(w, "Video record not found", http.StatusNotFound)
+		return nil, err
+	}
+
+	bodyBytes, err := io.ReadAll(response.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return bodyBytes, nil
+}
+
+func GetFileId(fileName string) string {
+	hashChecksum := sha1.New()
+	hashChecksum.Write([]byte(fileName))
+	fileId := fmt.Sprintf("%x", hashChecksum.Sum(nil))[:36]
+
+	return fileId
+}
+
+func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId string) {
+	fileBytes, err := GetManifestFile(w, videoId)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
+		return
+	}
+
+	file := string(fileBytes)
+	lines := strings.Split(file, "\n")
+
+	deleteUrl := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/"
+
+	for i := 0; i < len(lines); i++ {
+		if strings.HasSuffix(lines[i], ".ts") {
+			fileName := strings.Split(lines[i], ".")[0]
+			fileId := GetFileId(fileName)
+
+			request, err := http.NewRequest("DELETE", deleteUrl + fileId, nil)
+
+			if err != nil {
+				log.Println(err)
+				http.Error(w, "Error Deleting Chunk", http.StatusInternalServerError)
+				return
+			}
+
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+			request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+			request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+
+			client := &http.Client{}
+
+			response, err := client.Do(request)
+			if err != nil {
+				log.Println(err)
+				http.Error(w, "Error Deleting Chunk", http.StatusInternalServerError)
+				return
+			}
+			defer response.Body.Close()
+		}
+	}
+
+	log.Println("Deleted all .ts files...")
+
+	request, err := http.NewRequest("DELETE", deleteUrl + videoId, nil)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
+		return
+	}
+	defer response.Body.Close()
+
+	log.Println("Deleted .m3u8 file...")
+
+	query, err := db.Prepare(`DELETE FROM videos WHERE video_id=$1`)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = query.Exec(videoId)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error deleting record", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Deleted database record...")
 }

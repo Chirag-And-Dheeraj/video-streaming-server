@@ -34,7 +34,8 @@ func Connect() *sql.DB {
 		description TEXT,
 		upload_initiate_time TIMESTAMP,
 		upload_status SMALLINT CHECK (upload_status IN (0, 1)),
-		upload_end_time TIMESTAMP
+		upload_end_time TIMESTAMP,
+		delete_flag SMALLINT CHECK (delete_flag IN (0, 1))
 	);`)
 
 	if err != nil {

@@ -39,14 +39,19 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/?$", path); err == nil && matched {
 			log.Print("Manifest Request:")
 			log.Println(regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/?$", path))
-			controllers.GetManifestFile(w, r, db)
+			controllers.ManifestFileHandler(w, r, db)
 		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/[a-zA-B0-9_-]+.ts/?$", r.URL.Path); err == nil && matched {
 			log.Print("Segment Request:")
 			log.Println(regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/[a-zA-B0-9_-]+.ts/?$", path))
-			controllers.GetTSFiles(w, r, db)
+			controllers.TSFileHandler(w, r, db)
 		} else {
 			response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
 			http.Error(w, response, http.StatusNotFound)
+		}
+	} else if method == "DELETE" {
+		if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
+			log.Println("DELETE: " + path)
+			controllers.DeleteHandler(w, r, db)
 		}
 	}
 }
