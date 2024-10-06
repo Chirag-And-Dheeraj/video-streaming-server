@@ -55,9 +55,8 @@ window.onload = async () => {
         console.log(video_id)
         deleteLink.textContent = "Deleting..."
   
-        const response = await fetch(`${window.ENV.API_URL}/video`, {
-          method: "DELETE",
-          body: video_id
+        const response = await fetch(`${window.ENV.API_URL}/video/${video_id}`, {
+          method: "DELETE"
         });
   
         if(response.status === 204) {

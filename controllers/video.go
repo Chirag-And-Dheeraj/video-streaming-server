@@ -16,6 +16,8 @@ import (
 	"video-streaming-server/utils"
 )
 
+// @desc Create new video resource
+// @route POST /video
 func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	fileName := r.Header.Get("file-name")
 	isFirstChunk := r.Header.Get("first-chunk")
@@ -40,17 +42,18 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 						title,
 						description,
 						upload_initiate_time,
-						upload_status
+						upload_status,
+						delete_flag
 					) 
 				VALUES 
-					($1,$2,$3,$4,$5)
+					($1,$2,$3,$4,$5,$6)
 		`)
 
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0)
+		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0, 0)
 
 		if err != nil {
 			log.Println(err)
@@ -109,6 +112,8 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
+// @desc Get All Videos
+// @route GET /video
 func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	log.Println("Querying the database now for a list of videos...")
 	rows, err := db.Query(`
@@ -119,7 +124,9 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		FROM
 			videos
 		WHERE
-			upload_status=1;`)
+			upload_status=1
+			AND delete_flag=0;
+	`)
 
 	if err != nil {
 		log.Println("Error running select query for all video records.")
@@ -167,9 +174,11 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
+// @desc Get a Video
+// @route GET /video/[id]
 func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	video_id := r.URL.Path[len("/video/"):]
-	log.Println("Details of " + video_id + " requested.")
+	videoId := r.URL.Path[len("/video/"):]
+	log.Println("Details of " + videoId + " requested.")
 	detailsQuery, err := db.Prepare(`
 		SELECT
 			title, description
@@ -187,7 +196,7 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	defer detailsQuery.Close()
 
 	var title, description string
-	err = detailsQuery.QueryRow(video_id).Scan(&title, &description)
+	err = detailsQuery.QueryRow(videoId).Scan(&title, &description)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -201,7 +210,7 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	videoDetails := &Video{
-		ID:          video_id,
+		ID:          videoId,
 		Title:       title,
 		Description: description,
 	}
@@ -217,10 +226,12 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
-func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+// @desc Get Manifest File
+// @route GET /video/[id]/stream
+func ManifestFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoId := strings.Split(r.URL.Path[1:], "/")[1]
 
-	file, err := utils.GetMFile(w, videoId)
+	file, err := utils.GetManifestFile(w, videoId)
 
 	if err != nil {
 		log.Println(err)
@@ -232,7 +243,9 @@ func GetManifestFile(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
-func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+// @desc Get TS File
+// @route GET /video/[id]/stream/[id].ts
+func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoName := strings.Split(r.URL.Path[1:], "/")[3]
 
 	videoComps := strings.Split(videoName, ".")
@@ -285,103 +298,35 @@ func GetTSFiles(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.Write(bodyBytes)
 }
 
-func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	body, err := io.ReadAll(r.Body)
+// @desc Delete the video
+// @route DELETE /video
+func DeleteHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	videoId := r.URL.Path[len("/video/"):]
 
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
-		return
-	}
-
-	videoId := string(body)
-
-	fileBytes, err := utils.GetMFile(w, videoId)
-
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
-		return
-	}
-
-	file := string(fileBytes)
-	lines := strings.Split(file, "\n")
-
-	deleteUrl := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/"
-
-	for i := 0; i < len(lines); i++ {
-		if strings.HasSuffix(lines[i], ".ts") {
-			fileName := strings.Split(lines[i], ".")[0]
-			fileId := utils.GetFileId(fileName)
-			
-			request, err := http.NewRequest("DELETE", deleteUrl + fileId, nil)
-
-			if err != nil {
-				log.Println(err)
-				http.Error(w, "Error Deleting Chunk", http.StatusInternalServerError)
-				return
-			}
-		
-			request.Header.Set("Content-Type", "application/json")
-			request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-			request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-			request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
-		
-			client := &http.Client{}
-		
-			response, err := client.Do(request)
-			if err != nil {
-				log.Println(err)
-				http.Error(w, "Error Deleting Chunk", http.StatusInternalServerError)
-				return
-			}
-			defer response.Body.Close()
-		}
-	}
-
-	log.Println("Deleted all .ts files...")
-
-	request, err := http.NewRequest("DELETE", deleteUrl + videoId, nil)
-
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
-		return
-	}
-
-	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
-
-	client := &http.Client{}
-
-	response, err := client.Do(request)
-	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)
-		return
-	}
-	defer response.Body.Close()
-
-	log.Println("Deleted .m3u8 file...")
-
-	query, err := db.Prepare(`DELETE FROM videos WHERE video_id=$1`)
+	log.Println("Updating delete_flag in database record...")
+	updateStatement, err := db.Prepare(`
+		UPDATE
+			videos
+		SET
+			delete_flag=$1
+			WHERE
+			video_id=$2;
+	`)
 
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	_, err = query.Exec(videoId)
+	_, err = updateStatement.Exec(1, videoId)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error deleting record", http.StatusInternalServerError)
-		return
+		log.Fatal(err)
+	} else {
+		log.Println("Database record updated.")
 	}
 
-	log.Println("Deleted database record...")
-
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusAccepted)
+
+	go utils.DeleteVideo(w, r, db, videoId)
 }
