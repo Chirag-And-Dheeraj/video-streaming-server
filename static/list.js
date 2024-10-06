@@ -59,7 +59,7 @@ window.onload = async () => {
           method: "DELETE"
         });
   
-        if(response.status === 204) {
+        if(response.status === 202) {
           deleteLink.textContent = "Deleted"
         } else {
           deleteLink.textContent = "Error while deleting"
