@@ -299,7 +299,7 @@ func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 // @desc Delete the video
-// @route DELETE /video
+// @route DELETE /video/[id]
 func DeleteHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoId := r.URL.Path[len("/video/"):]
 
