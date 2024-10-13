@@ -28,9 +28,18 @@ fileForm.addEventListener("submit", (e) => {
 
     const fileReader = new FileReader();
     const theFile = video.files[0];
-    const type = theFile.type
+    const type = theFile.type;
+    const size = theFile.size;
+
     if(type !== "video/mp4") {
         fileError.textContent = "Only .mp4 files are supported";
+        fileError.style.display = "block";
+        return;
+    }
+
+    const sizeLimit = localStorage.getItem("FILE_SIZE_LIMIT")
+    if(size > sizeLimit) {
+        fileError.textContent = `File size is greater than ${sizeLimit/(1024*1024)} MB`;
         fileError.style.display = "block";
         return;
     }
