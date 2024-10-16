@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"database/sql"
 	"fmt"
 	"html"
@@ -91,12 +92,25 @@ func watchPageHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func configHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		response := map[string]interface{}{
+			"FILE_SIZE_LIMIT": os.Getenv("FILE_SIZE_LIMIT"),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
+	}
+}
+
 func setUpRoutes(db *sql.DB) {
 	log.Println("Setting up routes...")
 	http.HandleFunc("/", homePageHandler)
 	http.HandleFunc("/upload", uploadPageHandler)
 	http.HandleFunc("/list", listPageHandler)
 	http.HandleFunc("/watch", watchPageHandler)
+	http.HandleFunc("/config", configHandler)
 	http.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
 	})

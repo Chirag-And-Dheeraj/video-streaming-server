@@ -22,6 +22,13 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	fileName := r.Header.Get("file-name")
 	isFirstChunk := r.Header.Get("first-chunk")
 	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
+	sizeLimit, _ := strconv.Atoi(os.Getenv("FILE_SIZE_LIMIT"))
+
+	if fileSize > sizeLimit {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("File size greater than 15 MB is not acceptable"))
+		return
+	}
 
 	serverFileName := fileName + ".mp4"
 
