@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -208,9 +207,9 @@ func setUpRoutes(db *sql.DB) {
 func initServer() {
 	log.Println("Initializing server...")
 	utils.LoadEnvVars()
-	db := database.GetDBConn()
-	setUpRoutes(db)
-	utils.ResumeUploadIfAny(db)
+	database.DB = database.GetDBConn()
+	setUpRoutes(database.DB)
+	utils.ResumeUploadIfAny(database.DB)
 }
 
 func main() {

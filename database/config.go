@@ -9,10 +9,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
+var DB *sql.DB
 
 // DBConfig holds the database connection details
-type DBConfig struct {
+type DBConfig struct {	
 	Host     string
 	Port     string
 	User     string
@@ -95,20 +95,19 @@ func Connect(config *DBConfig) (*sql.DB, error) {
 }
 
 func GetDBConn() *sql.DB {
-	if db == nil {
+	if DB == nil {
 		dbConfig, err := newDBConfig()
 		if err != nil {
 			log.Fatalf("Failed to load database config: %v", err)
 		}
-		db, err := Connect(dbConfig)
+		DB, err := Connect(dbConfig)
 
 		if err != nil {
-			// return db
 			log.Fatalf("Failed to connect to database: %v", err)
 		}
 
-		return db
+		return DB
 	}
 
-	return db
+	return DB
 }

@@ -63,7 +63,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, userService
 						user_id
 					) 
 				VALUES 
-					($1,$2,$3,$4,$5,$6)
+					($1,$2,$3,$4,$5,$6,$7)
 		`)
 
 		if err != nil {
@@ -150,7 +150,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		WHERE
 			upload_status=1
 		AND 
-			delete_flag=0;
+			delete_flag=0
 		AND
 			user_id=$1;
 	`)
