@@ -12,14 +12,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"video-streaming-server/services"
 	. "video-streaming-server/types"
 	"video-streaming-server/utils"
 )
 
 // @desc Create new video resource
 // @route POST /video
-func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, userService services.UserService) {
+func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	fileName := r.Header.Get("file-name")
 	isFirstChunk := r.Header.Get("first-chunk")
 	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))

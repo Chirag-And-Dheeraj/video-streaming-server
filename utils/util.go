@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -307,7 +308,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 			fileName := strings.Split(lines[i], ".")[0]
 			fileId := GetFileId(fileName)
 
-			request, err := http.NewRequest("DELETE", deleteUrl + fileId, nil)
+			request, err := http.NewRequest("DELETE", deleteUrl+fileId, nil)
 
 			if err != nil {
 				log.Println(err)
@@ -334,7 +335,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	log.Println("Deleted all .ts files...")
 
-	request, err := http.NewRequest("DELETE", deleteUrl + videoId, nil)
+	request, err := http.NewRequest("DELETE", deleteUrl+videoId, nil)
 
 	if err != nil {
 		log.Println(err)
@@ -437,4 +438,10 @@ func GetUserFromRequest(r *http.Request) (*types.User, error) {
 		return user, nil
 	}
 	return nil, nil
+}
+
+func SendError(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }

@@ -30,12 +30,9 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	path := r.URL.Path
 	method := r.Method
 
-	userRepository := repositories.NewUserRepository(db)
-	userService := services.NewUserService(userRepository)
-
 	if method == "POST" {
 		log.Println("POST: " + path)
-		controllers.UploadVideo(w, r, db, userService)
+		controllers.UploadVideo(w, r, db)
 	} else if method == "GET" {
 		log.Println("GET: " + path)
 

@@ -12,7 +12,7 @@ import (
 var DB *sql.DB
 
 // DBConfig holds the database connection details
-type DBConfig struct {	
+type DBConfig struct {
 	Host     string
 	Port     string
 	User     string
@@ -100,14 +100,11 @@ func GetDBConn() *sql.DB {
 		if err != nil {
 			log.Fatalf("Failed to load database config: %v", err)
 		}
-		DB, err := Connect(dbConfig)
+		DB, err = Connect(dbConfig)
 
 		if err != nil {
 			log.Fatalf("Failed to connect to database: %v", err)
 		}
-
-		return DB
 	}
-
 	return DB
 }

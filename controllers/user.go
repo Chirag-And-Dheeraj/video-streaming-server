@@ -1,11 +1,11 @@
 package controllers
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
+	"encoding/json"
 	"video-streaming-server/services"
 	"video-streaming-server/utils"
 
@@ -31,19 +31,13 @@ type LoginRequest struct {
 	Password string `json:"password" validate:"required,min=8"`
 }
 
-func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-	json.NewEncoder(w).Encode(map[string]string{"error": message})
-}
-
 func RegisterUser(w http.ResponseWriter, r *http.Request, userService services.UserService) {
 	var requestBody RegisterRequest
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
 		log.Println(err)
-		writeJSONError(w, http.StatusBadRequest, "Invalid Request Body")
+		utils.SendError(w, http.StatusBadRequest, "Invalid Request Body")
 		return
 	}
 
@@ -51,7 +45,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, userService services.U
 	err = validate.Struct(requestBody)
 	if err != nil {
 		log.Println(err)
-		writeJSONError(w, http.StatusBadRequest, "Validation failed")
+		utils.SendError(w, http.StatusBadRequest, "Validation failed")
 		return
 	}
 
@@ -59,12 +53,12 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, userService services.U
 	if err != nil {
 		switch err.Error() {
 		case "email already exists":
-			writeJSONError(w, http.StatusConflict, "Email already exists")
+			utils.SendError(w, http.StatusConflict, "Email already exists")
 		case "username already exists":
-			writeJSONError(w, http.StatusConflict, "Username already taken")
+			utils.SendError(w, http.StatusConflict, "Username already taken")
 		default:
 			log.Fatal(err)
-			writeJSONError(w, http.StatusInternalServerError, "Internal server error")
+			utils.SendError(w, http.StatusInternalServerError, "Internal server error")
 		}
 
 		return
@@ -80,7 +74,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, userService services.U
 	jsonResponse, err := json.Marshal(response)
 
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Internal server error")
+		utils.SendError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 
@@ -95,7 +89,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request, userService services.User
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
 		log.Println(err)
-		writeJSONError(w, http.StatusBadRequest, "Invalid Request Body")
+		utils.SendError(w, http.StatusBadRequest, "Invalid Request Body")
 		return
 	}
 
@@ -103,7 +97,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request, userService services.User
 	err = validate.Struct(requestBody)
 	if err != nil {
 		log.Println(err)
-		writeJSONError(w, http.StatusBadRequest, "Invalid Request Body")
+		utils.SendError(w, http.StatusBadRequest, "Invalid Request Body")
 		return
 	}
 
@@ -111,11 +105,11 @@ func LoginUser(w http.ResponseWriter, r *http.Request, userService services.User
 	if err != nil {
 		switch err.Error() {
 		case "invalid credentials":
-			writeJSONError(w, http.StatusUnauthorized, "Invalid email or password")
+			utils.SendError(w, http.StatusUnauthorized, "Invalid email or password")
 		case "user does not exist":
-			writeJSONError(w, http.StatusNotFound, "User does not exist")
+			utils.SendError(w, http.StatusNotFound, "User does not exist")
 		default:
-			writeJSONError(w, http.StatusInternalServerError, "Internal server error")
+			utils.SendError(w, http.StatusInternalServerError, "Internal server error")
 		}
 		return
 	}
@@ -123,7 +117,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request, userService services.User
 	// Generate JWT token
 	token, err := utils.GenerateJWT(user.ID, user.Username)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "Failed to generate token")
+		utils.SendError(w, http.StatusInternalServerError, "Failed to generate token")
 		return
 	}
 
