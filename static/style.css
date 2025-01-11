@@ -106,7 +106,7 @@ main section {
 main section label,
 main section input,
 main section textarea,
-#uploadVideoButton {
+.primaryButton {
   font-size: 1.125em;
   border-radius: 5px;
   outline: none;
@@ -118,7 +118,7 @@ main section textarea,
   width: 100%;
 }
 
-#uploadVideoButton {
+.primaryButton {
   cursor: pointer;
 }
 
@@ -140,10 +140,6 @@ main section textarea,
   color: #a0a0ff;
 }
 
-#uploadFileButton {
-  cursor: pointer;
-}
-
 #video {
   margin: 1.5em;
 }
@@ -151,4 +147,3 @@ main section textarea,
 #form-section {
   display: block;
 }
-

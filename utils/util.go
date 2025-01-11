@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -14,6 +16,12 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+	"video-streaming-server/config"
+	"video-streaming-server/database"
+	"video-streaming-server/repositories"
+	"video-streaming-server/types"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func LoadEnvVars() {
@@ -300,7 +308,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 			fileName := strings.Split(lines[i], ".")[0]
 			fileId := GetFileId(fileName)
 
-			request, err := http.NewRequest("DELETE", deleteUrl + fileId, nil)
+			request, err := http.NewRequest("DELETE", deleteUrl+fileId, nil)
 
 			if err != nil {
 				log.Println(err)
@@ -327,7 +335,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	log.Println("Deleted all .ts files...")
 
-	request, err := http.NewRequest("DELETE", deleteUrl + videoId, nil)
+	request, err := http.NewRequest("DELETE", deleteUrl+videoId, nil)
 
 	if err != nil {
 		log.Println(err)
@@ -367,4 +375,73 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 	}
 
 	log.Println("Deleted database record...")
+}
+
+func GenerateJWT(userID string, username string) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id":  userID,
+		"username": username,
+		"exp":      time.Now().Add(time.Hour * 72).Unix(),
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	return token.SignedString([]byte(config.SecretKey))
+}
+
+func DecodeJWT(tokenString string) (jwt.MapClaims, error) {
+	claims := jwt.MapClaims{}
+
+	_, _, err := jwt.NewParser().ParseUnverified(tokenString, claims)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify expiration
+	exp, ok := claims["exp"].(float64)
+	if !ok {
+		return nil, errors.New("expiration claim missing")
+	}
+	if time.Since(time.Unix(int64(exp), 0)) > 0 {
+		return nil, errors.New("token expired")
+	}
+
+	return claims, nil
+}
+
+func VerifyToken(tokenString string) (*jwt.Token, error) {
+	return jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(config.SecretKey), nil
+	})
+}
+
+func GetUserFromRequest(r *http.Request) (*types.User, error) {
+	authToken, err := r.Cookie("auth_token")
+	if err != nil {
+		return nil, err
+	}
+	db := database.GetDBConn()
+	userRepository := repositories.NewUserRepository(db)
+	token, err := VerifyToken(authToken.Value)
+	if err != nil {
+		return nil, err
+	}
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		userID := claims["user_id"].(string)
+		user, err := userRepository.GetUserByID(userID)
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
+	return nil, nil
+}
+
+func SendError(w http.ResponseWriter, statusCode int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }

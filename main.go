@@ -1,16 +1,21 @@
 package main
 
 import (
-	"encoding/json"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"html"
+	"html/template"
 	"log"
 	"net/http"
 	"os"
 	"regexp"
+	"time"
 	"video-streaming-server/controllers"
 	"video-streaming-server/database"
+	"video-streaming-server/middleware"
+	"video-streaming-server/repositories"
+	"video-streaming-server/services"
 	"video-streaming-server/utils"
 )
 
@@ -57,13 +62,69 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
+type HomePageData struct {
+	IsLoggedIn bool
+	Username   string
+}
+
 func homePageHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
 		http.Error(w, response, http.StatusNotFound)
-	} else if r.Method == "GET" {
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	tmpl := template.Must(template.ParseFiles("./client/index.html"))
+
+	isLoggedIn := false
+	username := ""
+	cookie, err := r.Cookie("auth_token")
+	if err == nil && cookie != nil {
+		isLoggedIn = true
+		claims, _ := utils.DecodeJWT(cookie.Value)
+		username = claims["username"].(string)
+	}
+
+	tmpl.Execute(w, HomePageData{
+		IsLoggedIn: isLoggedIn,
+		Username:   username,
+	})
+}
+
+func registerPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+
+	path := r.URL.Path
+	method := r.Method
+
+	if method == "POST" {
+		log.Println("POST: " + path)
+		userRepository := repositories.NewUserRepository(db)
+		userService := services.NewUserService(userRepository)
+		controllers.RegisterUser(w, r, userService)
+	} else if method == "GET" {
 		log.Println("GET: " + r.URL.Path)
-		p := "./client/index.html"
+		p := "./client/register.html"
+		http.ServeFile(w, r, p)
+	}
+}
+
+func loginPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	path := r.URL.Path
+	method := r.Method
+
+	if method == "POST" {
+		log.Println("POST: " + path)
+		userRepository := repositories.NewUserRepository(db)
+		userService := services.NewUserService(userRepository)
+		controllers.LoginUser(w, r, userService)
+	} else if method == "GET" {
+		log.Println("GET: " + r.URL.Path)
+		p := "./client/login.html"
 		http.ServeFile(w, r, p)
 	}
 }
@@ -104,16 +165,38 @@ func configHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "auth_token",
+			Value:    "",
+			Expires:  time.Now(),
+			Path:     "/",
+			HttpOnly: true,
+			SameSite: http.SameSiteStrictMode,
+		})
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	}
+}
+
 func setUpRoutes(db *sql.DB) {
 	log.Println("Setting up routes...")
 	http.HandleFunc("/", homePageHandler)
-	http.HandleFunc("/upload", uploadPageHandler)
-	http.HandleFunc("/list", listPageHandler)
-	http.HandleFunc("/watch", watchPageHandler)
-	http.HandleFunc("/config", configHandler)
-	http.HandleFunc("/video/", func(w http.ResponseWriter, r *http.Request) {
-		videoHandler(w, r, db)
+	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
+		registerPageHandler(w, r, db)
 	})
+	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		loginPageHandler(w, r, db)
+	})
+	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/upload", middleware.AuthRequired(uploadPageHandler))
+	http.HandleFunc("/list", middleware.AuthRequired(listPageHandler))
+	http.HandleFunc("/watch", middleware.AuthRequired(watchPageHandler))
+	http.HandleFunc("/config", configHandler)
+	http.HandleFunc("/video/", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
+		videoHandler(w, r, db)
+	}))
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Routes set.")
 }
@@ -121,9 +204,9 @@ func setUpRoutes(db *sql.DB) {
 func initServer() {
 	log.Println("Initializing server...")
 	utils.LoadEnvVars()
-	db := database.Connect()
-	setUpRoutes(db)
-	utils.ResumeUploadIfAny(db)
+	database.DB = database.GetDBConn()
+	setUpRoutes(database.DB)
+	utils.ResumeUploadIfAny(database.DB)
 }
 
 func main() {
