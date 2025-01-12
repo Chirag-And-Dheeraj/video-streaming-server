@@ -147,3 +147,16 @@ main section textarea,
 #form-section {
   display: block;
 }
+
+
+.logo {
+  height: auto;
+  max-height: 100%;
+  width: auto;
+  max-width: 128px;
+}
+
+.logo_index {
+  width: auto;
+  max-width: 256px;
+}
