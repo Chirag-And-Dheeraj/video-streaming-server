@@ -1,5 +1,5 @@
 window.onload = async () => {
-  var video = document.getElementById("video");
+  let video = document.getElementById("video");
   const url = new URL(window.location.href);
   const searchParams = new URLSearchParams(url.search);
   const v = searchParams.get("v");
