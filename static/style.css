@@ -148,7 +148,6 @@ main section textarea,
   display: block;
 }
 
-
 .logo {
   height: auto;
   max-height: 100%;
@@ -159,4 +158,8 @@ main section textarea,
 .logo_index {
   width: auto;
   max-width: 256px;
+}
+
+.logout {
+  cursor: pointer;
 }

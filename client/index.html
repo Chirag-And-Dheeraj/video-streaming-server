@@ -39,10 +39,10 @@
           {{if .IsLoggedIn}}
           <li><a class="special-blue" href="/upload">Upload</a></li>
           <li><a class="special-blue" href="/list">List Files</a></li>
-          <li><a class="special-red" href="/" onclick="logout()">Logout</a></li>
+          <li><a class="special-red" onclick="logout()">Logout</a></li>
           {{else}}
           <li><a class="special-blue" href="/login">Login</a></li>
-          <li><a class="special-blue" href="/register">Register</a></li>
+          <li><a class="special-blue logout" href="/register">Register</a></li>
           {{end}}
         </ul>
       </nav>
