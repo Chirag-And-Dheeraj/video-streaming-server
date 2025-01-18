@@ -229,16 +229,51 @@ func closeVideoFile(tmpFile *os.File) {
 func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.File, db *sql.DB) {
 	log.Println("Received all chunks for: " + serverFileName)
 	log.Println("Breaking the video into .ts files.")
-	breakResult := breakFile(("./video/" + serverFileName), fileName)
-	if breakResult {
-		log.Println("Successfully broken " + fileName + " into .ts files.")
-		log.Println("Deleting the original file from server.")
-		closeVideoFile(tmpFile)
-		uploadToAppwrite(fileName, db)
-		log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
-	} else {
-		log.Println("Error breaking " + fileName + " into .ts files.")
+	metaData, err := extractMetaData(("./video/" + serverFileName))
+	if err != nil {
+		log.Print("error extracting metadata")
 	}
+	codec := metaData.Streams[0].CodecName //h264 hevc
+	log.Println(codec)
+	var conversionResult bool
+	if codec != "h264" {
+		conversionResult = convertToH264(("./video/" + serverFileName), fileName)
+		if !conversionResult {
+			log.Println("Error converting " + fileName + " from HEVC to AVC.")
+			return
+		}
+	}
+
+	if codec == "h264" || (codec != "h264" && conversionResult) {
+		breakResult := breakFile(("./video/" + serverFileName), fileName)
+		if breakResult {
+			log.Println("Successfully broken " + fileName + " into .ts files.")
+			log.Println("Deleting the original file from server.")
+			closeVideoFile(tmpFile)
+			uploadToAppwrite(fileName, db)
+			log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
+		} else {
+			log.Println("Error breaking " + fileName + " into .ts files.")
+		}
+	}
+}
+
+func convertToH264(videoPath string, fileName string) (status bool) {
+	cmd := exec.Command("ffmpeg", "-i", videoPath, "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", os.Getenv("ROOT_PATH") + "/video/" + fileName + "_temp.mp4")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		log.Printf("%s\n", output)
+		log.Fatal(err)
+		return false
+	}
+
+	err = os.Rename(os.Getenv("ROOT_PATH") + "/video/" + fileName + "_temp.mp4", os.Getenv("ROOT_PATH") + "/video/" + fileName + ".mp4")
+	if err != nil {
+		log.Println("Error Renaming the file.")
+		return false
+	}
+
+	return true
 }
 
 func GetManifestFile(w http.ResponseWriter, videoId string) ([]byte, error) {
@@ -438,6 +473,30 @@ func GetUserFromRequest(r *http.Request) (*types.User, error) {
 		return user, nil
 	}
 	return nil, nil
+}
+
+func extractMetaData(videoPath string) (*types.FFProbeOutput, error) {
+	log.Print(videoPath)
+	cmd := exec.Command("ffprobe",
+		"-v", "error",
+		"-show_entries", "stream=codec_name,codec_type",
+		"-show_entries", "format=filename,duration,bit_rate,size",
+		"-of", "json",
+		videoPath,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("error running ffprobe: %w", err)
+	}
+
+	var ffprobeOutput types.FFProbeOutput
+	err = json.Unmarshal(output, &ffprobeOutput)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing ffprobe output: %w", err)
+	}
+
+	return &ffprobeOutput, nil
 }
 
 func SendError(w http.ResponseWriter, statusCode int, message string) {
