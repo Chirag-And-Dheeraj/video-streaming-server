@@ -61,13 +61,16 @@ func breakFile(videoPath string, fileName string) bool {
 	log.Println("Video path: " + videoPath)
 
 	metaData, err := extractMetaData(videoPath)
+	videoCodec := ""
+	audioCodec := ""
 	if err != nil {
-		log.Print("error extracting metadata")
+		log.Println("Error extracting metadata for:" + videoPath)
+	} else {
+		videoCodec = metaData.Streams[0].CodecName
+		audioCodec = metaData.Streams[1].CodecName
+		log.Println("Video Codec: " + videoCodec)
+		log.Println("Audio Codec: " + audioCodec)
 	}
-	videoCodec := metaData.Streams[0].CodecName
-	audioCodec := metaData.Streams[1].CodecName
-	log.Println("Video Codec: " + videoCodec)
-	log.Println("Audio Codec: " + audioCodec)
 
 	videoCodecAction := "copy"
 	audioCodecAction := "copy"
@@ -87,8 +90,8 @@ func breakFile(videoPath string, fileName string) bool {
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Printf("%s\n", output)
-		log.Fatal(err)
+		log.Println(output)
+		log.Println(err)
 		return false
 	} else {
 		return true
