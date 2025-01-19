@@ -50,8 +50,6 @@ func LoadEnvVars() {
 }
 
 func breakFile(videoPath string, fileName string) bool {
-	// ffmpeg -y -i DearZindagi.mkv -codec copy -map 0 -f segment -segment_time 7 -segment_format mpegts -segment_list DearZindagi_index.m3u8 -segment_list_type m3u8 ./segment_no_%d.ts
-
 	log.Println("Inside BreakFile function.")
 
 	if err := os.Mkdir(fmt.Sprintf("segments/%s", fileName), os.ModePerm); err != nil {
@@ -62,7 +60,29 @@ func breakFile(videoPath string, fileName string) bool {
 
 	log.Println("Video path: " + videoPath)
 
-	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-codec", "copy", "-map", "0", "-f", "segment", "-segment_time", "4", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
+	metaData, err := extractMetaData(videoPath)
+	if err != nil {
+		log.Print("error extracting metadata")
+	}
+	videoCodec := metaData.Streams[0].CodecName
+	audioCodec := metaData.Streams[1].CodecName
+	log.Println("Video Codec: " + videoCodec)
+	log.Println("Audio Codec: " + audioCodec)
+
+	videoCodecAction := "copy"
+	audioCodecAction := "copy"
+
+	if videoCodec != "h264" {
+		log.Println("Converting video codec to AVC")
+		videoCodecAction = "libx264"
+	}
+
+	if audioCodec != "aac" {
+		log.Println("Converting audio codec to AAC")
+		audioCodecAction = "aac"
+	}
+
+	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-c:v", videoCodecAction, "-c:a", audioCodecAction, "-map", "0", "-f", "segment", "-segment_time", "4", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
 
@@ -229,51 +249,17 @@ func closeVideoFile(tmpFile *os.File) {
 func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.File, db *sql.DB) {
 	log.Println("Received all chunks for: " + serverFileName)
 	log.Println("Breaking the video into .ts files.")
-	metaData, err := extractMetaData(("./video/" + serverFileName))
-	if err != nil {
-		log.Print("error extracting metadata")
-	}
-	codec := metaData.Streams[0].CodecName //h264 hevc
-	log.Println(codec)
-	var conversionResult bool
-	if codec != "h264" {
-		conversionResult = convertToH264(("./video/" + serverFileName), fileName)
-		if !conversionResult {
-			log.Println("Error converting " + fileName + " from HEVC to AVC.")
-			return
-		}
-	}
 
-	if codec == "h264" || (codec != "h264" && conversionResult) {
-		breakResult := breakFile(("./video/" + serverFileName), fileName)
-		if breakResult {
-			log.Println("Successfully broken " + fileName + " into .ts files.")
-			log.Println("Deleting the original file from server.")
-			closeVideoFile(tmpFile)
-			uploadToAppwrite(fileName, db)
-			log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
-		} else {
-			log.Println("Error breaking " + fileName + " into .ts files.")
-		}
+	breakResult := breakFile(("./video/" + serverFileName), fileName)
+	if breakResult {
+		log.Println("Successfully broken " + fileName + " into .ts files.")
+		log.Println("Deleting the original file from server.")
+		closeVideoFile(tmpFile)
+		uploadToAppwrite(fileName, db)
+		log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
+	} else {
+		log.Println("Error breaking " + fileName + " into .ts files.")
 	}
-}
-
-func convertToH264(videoPath string, fileName string) (status bool) {
-	cmd := exec.Command("ffmpeg", "-i", videoPath, "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", os.Getenv("ROOT_PATH") + "/video/" + fileName + "_temp.mp4")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("%s\n", output)
-		log.Fatal(err)
-		return false
-	}
-
-	err = os.Rename(os.Getenv("ROOT_PATH") + "/video/" + fileName + "_temp.mp4", os.Getenv("ROOT_PATH") + "/video/" + fileName + ".mp4")
-	if err != nil {
-		log.Println("Error Renaming the file.")
-		return false
-	}
-
-	return true
 }
 
 func GetManifestFile(w http.ResponseWriter, videoId string) ([]byte, error) {
