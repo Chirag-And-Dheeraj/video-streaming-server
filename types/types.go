@@ -6,6 +6,23 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type Stream struct {
+	CodecName     string `json:"codec_name"`
+	CodecType     string `json:"codec_type"`
+}
+
+type Format struct {
+	Filename string            `json:"filename"`
+	Duration string            `json:"duration"`
+	BitRate  string            `json:"bit_rate"`
+	Size     string            `json:"size"`
+}
+
+type FFProbeOutput struct {
+	Streams []Stream `json:"streams"`
+	Format  Format   `json:"format"`
+}
+
 type Video struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`

@@ -50,8 +50,6 @@ func LoadEnvVars() {
 }
 
 func breakFile(videoPath string, fileName string) bool {
-	// ffmpeg -y -i DearZindagi.mkv -codec copy -map 0 -f segment -segment_time 7 -segment_format mpegts -segment_list DearZindagi_index.m3u8 -segment_list_type m3u8 ./segment_no_%d.ts
-
 	log.Println("Inside BreakFile function.")
 
 	if err := os.Mkdir(fmt.Sprintf("segments/%s", fileName), os.ModePerm); err != nil {
@@ -62,13 +60,38 @@ func breakFile(videoPath string, fileName string) bool {
 
 	log.Println("Video path: " + videoPath)
 
-	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-codec", "copy", "-map", "0", "-f", "segment", "-segment_time", "4", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
+	metaData, err := extractMetaData(videoPath)
+	videoCodec := ""
+	audioCodec := ""
+	if err != nil {
+		log.Println("Error extracting metadata for:" + videoPath)
+	} else {
+		videoCodec = metaData.Streams[0].CodecName
+		audioCodec = metaData.Streams[1].CodecName
+		log.Println("Video Codec: " + videoCodec)
+		log.Println("Audio Codec: " + audioCodec)
+	}
+
+	videoCodecAction := "copy"
+	audioCodecAction := "copy"
+
+	if videoCodec != "h264" {
+		log.Println("Converting video codec to AVC")
+		videoCodecAction = "libx264"
+	}
+
+	if audioCodec != "aac" {
+		log.Println("Converting audio codec to AAC")
+		audioCodecAction = "aac"
+	}
+
+	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-c:v", videoCodecAction, "-c:a", audioCodecAction, "-map", "0", "-f", "segment", "-segment_time", "4", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Printf("%s\n", output)
-		log.Fatal(err)
+		log.Println(output)
+		log.Println(err)
 		return false
 	} else {
 		return true
@@ -229,6 +252,7 @@ func closeVideoFile(tmpFile *os.File) {
 func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.File, db *sql.DB) {
 	log.Println("Received all chunks for: " + serverFileName)
 	log.Println("Breaking the video into .ts files.")
+
 	breakResult := breakFile(("./video/" + serverFileName), fileName)
 	if breakResult {
 		log.Println("Successfully broken " + fileName + " into .ts files.")
@@ -438,6 +462,30 @@ func GetUserFromRequest(r *http.Request) (*types.User, error) {
 		return user, nil
 	}
 	return nil, nil
+}
+
+func extractMetaData(videoPath string) (*types.FFProbeOutput, error) {
+	log.Print(videoPath)
+	cmd := exec.Command("ffprobe",
+		"-v", "error",
+		"-show_entries", "stream=codec_name,codec_type",
+		"-show_entries", "format=filename,duration,bit_rate,size",
+		"-of", "json",
+		videoPath,
+	)
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("error running ffprobe: %w", err)
+	}
+
+	var ffprobeOutput types.FFProbeOutput
+	err = json.Unmarshal(output, &ffprobeOutput)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing ffprobe output: %w", err)
+	}
+
+	return &ffprobeOutput, nil
 }
 
 func SendError(w http.ResponseWriter, statusCode int, message string) {
