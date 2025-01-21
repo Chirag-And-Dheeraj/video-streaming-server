@@ -90,7 +90,7 @@ func breakFile(videoPath string, fileName string) bool {
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Println(output)
+		log.Println(string(output))
 		log.Println(err)
 		return false
 	} else {
