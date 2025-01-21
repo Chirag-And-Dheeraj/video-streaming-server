@@ -66,8 +66,14 @@ func breakFile(videoPath string, fileName string) bool {
 	if err != nil {
 		log.Println("Error extracting metadata for:" + videoPath)
 	} else {
-		videoCodec = metaData.Streams[0].CodecName
-		audioCodec = metaData.Streams[1].CodecName
+		for _, codecs := range metaData.Streams {
+			switch codecs.CodecType {
+			case "video":
+				videoCodec = codecs.CodecName
+			case "audio":
+				audioCodec = codecs.CodecName
+			}
+		}
 		log.Println("Video Codec: " + videoCodec)
 		log.Println("Audio Codec: " + audioCodec)
 	}
@@ -85,7 +91,7 @@ func breakFile(videoPath string, fileName string) bool {
 		audioCodecAction = "aac"
 	}
 
-	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-c:v", videoCodecAction, "-preset", "ultrafast", "-c:a", audioCodecAction, "-map", "0", "-f", "segment", "-segment_time", "4", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
+	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-c:v", videoCodecAction, "-preset", "veryfast", "-c:a", audioCodecAction, "-map", "0", "-f", "segment", "-segment_time", "4", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
 
@@ -114,13 +120,13 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 	files, err := os.ReadDir(fmt.Sprintf("segments/%s", folderName))
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	if len(files) == 0 {
 		err = os.Remove("segments/" + folderName)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 		return
 	}
@@ -131,7 +137,7 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 		fileToUpload, err := os.ReadFile(fmt.Sprintf("segments/%s/%s", folderName, file.Name()))
 
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 
 		uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files"
@@ -150,31 +156,31 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 		err = writer.WriteField("fileId", fileId)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 
 		part, err := writer.CreateFormFile("file", file.Name())
 
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 
 		_, err = part.Write(fileToUpload)
 
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 
 		err = writer.Close()
 
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 
 		request, err := http.NewRequest("POST", uploadRequestURL, &requestBody)
 		if err != nil {
 			log.Printf("Error creating request")
-			log.Fatal(err)
+			log.Println(err)
 		}
 
 		request.Header.Set("Content-Type", writer.FormDataContentType())
@@ -185,20 +191,22 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 		client := &http.Client{}
 		response, err := client.Do(request)
 		if err != nil {
-			log.Fatal(err)
+			log.Println("1")
+			log.Println(err)
 		}
 		defer response.Body.Close()
 		if response.StatusCode != 201 {
 			body, err := io.ReadAll(response.Body)
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
 			}
-			log.Fatal(string(body))
+			log.Println(string(body))
+			log.Println(response.StatusCode)
 		} else {
 			count = idx
 			err = os.Remove("segments/" + folderName + "/" + file.Name())
 			if err != nil {
-				log.Fatal(err)
+				log.Println(err)
 			}
 		}
 	}
@@ -215,13 +223,13 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 	`)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	_, err = updateStatement.Exec(1, time.Now(), folderName)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	} else {
 		log.Println("Database record updated.")
 		log.Println("Finished uploading", folderName, " :)")
@@ -230,7 +238,7 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 	if count == len(files)-1 {
 		err = os.Remove("segments/" + folderName)
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 		}
 	}
 }
