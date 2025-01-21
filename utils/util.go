@@ -76,12 +76,12 @@ func breakFile(videoPath string, fileName string) bool {
 	audioCodecAction := "copy"
 
 	if videoCodec != "h264" {
-		log.Println("converting video codec to AVC")
+		log.Println("Converting video codec to AVC")
 		videoCodecAction = "libx264"
 	}
 
 	if audioCodec != "aac" {
-		log.Println("converting audio codec to AAC")
+		log.Println("Converting audio codec to AAC")
 		audioCodecAction = "aac"
 	}
 
