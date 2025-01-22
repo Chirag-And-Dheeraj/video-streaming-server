@@ -6,6 +6,7 @@ const descriptionElement = document.getElementById("description");
 const fileError = document.getElementById("fileError");
 const titleError = document.getElementById("titleError");
 const descriptionError = document.getElementById("descriptionError");
+const uploadVideoButton = document.getElementById("uploadVideoButton");
 
 fileForm.addEventListener("submit", (e) => {
     e.preventDefault()
@@ -48,6 +49,8 @@ fileForm.addEventListener("submit", (e) => {
     descriptionError.style.display = "none";
     fileError.style.display = "none";
 
+    uploadVideoButton.disabled = true;
+
     fileReader.onload = async (ev) => {
         const CHUNK_SIZE = 50000;
         const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
@@ -59,7 +62,8 @@ fileForm.addEventListener("submit", (e) => {
             const fileName = uuidv4();
             console.log(fileName);
             let sent = 0;
-            for (let chunkID = 0; chunkID < chunkCount + 1; chunkID++) {
+            let chunkID;
+            for (chunkID = 0; chunkID < chunkCount + 1; chunkID++) {
                 console.log(chunkID);
                 let chunk;
                 if (chunkID == chunkCount) {
@@ -96,6 +100,10 @@ fileForm.addEventListener("submit", (e) => {
                 divOutput.textContent =
                     Math.round((sent / ev.target.result.byteLength) * 100, 0) +
                     " %";
+            }
+
+            if(chunkID >= chunkCount+1) {
+                divOutput.append(". Your video will be available in few minutes on List Files page.")
             }
             console.log("Successfully sent " + sent + " from the client.");
         });
