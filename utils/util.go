@@ -96,7 +96,7 @@ func breakFile(videoPath string, fileName string) bool {
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
-		log.Println(string(output))
+		log.Println("File break failed:" + string(output))
 		log.Println(err)
 		return false
 	} else {
@@ -191,7 +191,6 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 		client := &http.Client{}
 		response, err := client.Do(request)
 		if err != nil {
-			log.Println("1")
 			log.Println(err)
 		}
 		defer response.Body.Close()
@@ -200,8 +199,8 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 			if err != nil {
 				log.Println(err)
 			}
-			log.Println(string(body))
-			log.Println(response.StatusCode)
+			log.Println("Response body from Appwrite:" + string(body))
+			log.Println("Status code from Appwrite" + string(response.StatusCode))
 		} else {
 			count = idx
 			err = os.Remove("segments/" + folderName + "/" + file.Name())
