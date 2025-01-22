@@ -102,7 +102,7 @@ fileForm.addEventListener("submit", (e) => {
                     " %";
             }
 
-            if(chunkID > chunkCount) {
+            if(chunkID >= chunkCount+1) {
                 divOutput.append(". Your video will be available in few minutes on List Files page.")
             }
             console.log("Successfully sent " + sent + " from the client.");
