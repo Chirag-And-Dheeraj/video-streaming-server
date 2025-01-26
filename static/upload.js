@@ -8,7 +8,29 @@ const titleError = document.getElementById("titleError");
 const descriptionError = document.getElementById("descriptionError");
 const uploadVideoButton = document.getElementById("uploadVideoButton");
 
-fileForm.addEventListener("submit", (e) => {
+function checkFileType(file) {
+  const supportedTypes = JSON.parse(
+    localStorage.getItem("SUPPORTED_FILE_TYPES")
+  );
+
+  if (
+    !supportedTypes.some(
+      (supportedType) => supportedType.file_type === file.type
+    )
+  ) {
+    console.log(file.type);
+    const supportedExtensions = supportedTypes
+      .map((type) => type.file_extension)
+      .join(", ");
+
+    fileError.textContent = `Only ${supportedExtensions} files are supported`;
+    fileError.style.display = "block";
+    return false;
+  }
+  return true;
+}
+
+fileForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const title = titleElement.value;
@@ -29,21 +51,20 @@ fileForm.addEventListener("submit", (e) => {
 
   const fileReader = new FileReader();
   const theFile = video.files[0];
-  const type = theFile.type;
   const size = theFile.size;
 
-  if (type !== "video/mp4" && type !== "video/x-matroska") {
-    console.log(type);
-    fileError.textContent = "Only .mp4 and .mkv files are supported";
-    fileError.style.display = "block";
+  console.log(`file type = ${theFile.type}`);
+
+  if (!checkFileType(theFile)) {
     return;
   }
 
   const sizeLimit = localStorage.getItem("FILE_SIZE_LIMIT");
   if (size > sizeLimit) {
-    fileError.textContent = `File size is greater than ${
-      sizeLimit / (1024 * 1024)
-    } MB`;
+    fileError.textContent = `File size is greater than ${(
+      sizeLimit /
+      (1024 * 1024)
+    ).toFixed(2)} MB`;
     fileError.style.display = "block";
     return;
   }
@@ -56,7 +77,7 @@ fileForm.addEventListener("submit", (e) => {
 
   fileReader.onload = async (ev) => {
     const CHUNK_SIZE = 50000;
-    const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
+    const chunkCount = Math.ceil(ev.target.result.byteLength / CHUNK_SIZE);
     console.log(chunkCount);
     console.log("Read successfully");
 
@@ -66,10 +87,10 @@ fileForm.addEventListener("submit", (e) => {
       console.log(fileName);
       let sent = 0;
       let chunkID;
-      for (chunkID = 0; chunkID < chunkCount + 1; chunkID++) {
+      for (chunkID = 0; chunkID < chunkCount; chunkID++) {
         console.log(chunkID);
         let chunk;
-        if (chunkID == chunkCount) {
+        if (chunkID == chunkCount - 1) {
           chunk = ev.target.result.slice(chunkID * CHUNK_SIZE);
         } else {
           chunk = ev.target.result.slice(
@@ -79,11 +100,8 @@ fileForm.addEventListener("submit", (e) => {
         }
         console.log("Chunk byteLength: ", chunk.byteLength);
         sent += chunk.byteLength;
-        firstChunk = false;
-        if (chunkID == 0) {
-          firstChunk = true;
-        }
-        // reason for await is we want to wait for server's response and not flood the backend with all requests.
+        const firstChunk = chunkID === 0;
+
         const response = await fetch(`${window.ENV.API_URL}/video/`, {
           method: "POST",
           headers: {
@@ -91,7 +109,7 @@ fileForm.addEventListener("submit", (e) => {
             "content-length": chunk.length,
             "file-name": fileName,
             "file-size": ev.target.result.byteLength,
-            "first-chunk": firstChunk,
+            "first-chunk": firstChunk.toString(),
             title: title,
             description: description,
           },
@@ -100,16 +118,18 @@ fileForm.addEventListener("submit", (e) => {
 
         console.log(await response.text());
 
-        divOutput.textContent =
-          Math.round((sent / ev.target.result.byteLength) * 100, 0) + " %";
+        divOutput.textContent = `${Math.round(
+          (sent / ev.target.result.byteLength) * 100,
+          0
+        )} %`;
       }
 
-      if (chunkID >= chunkCount + 1) {
+      if (chunkID >= chunkCount) {
         divOutput.append(
           ". Your video will be available in few minutes on List Files page."
         );
       }
-      console.log("Successfully sent " + sent + " from the client.");
+      console.log(`Successfully sent ${sent} bytes from the client.`);
     });
   };
 
