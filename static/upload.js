@@ -61,10 +61,9 @@ fileForm.addEventListener("submit", async (e) => {
 
   const sizeLimit = localStorage.getItem("FILE_SIZE_LIMIT");
   if (size > sizeLimit) {
-    fileError.textContent = `File size is greater than ${(
-      sizeLimit /
-      (1024 * 1024)
-    ).toFixed(2)} MB`;
+    fileError.textContent = `File size is greater than ${
+      sizeLimit / (1024 * 1024)
+    } MB`;
     fileError.style.display = "block";
     return;
   }
@@ -77,7 +76,7 @@ fileForm.addEventListener("submit", async (e) => {
 
   fileReader.onload = async (ev) => {
     const CHUNK_SIZE = 50000;
-    const chunkCount = Math.ceil(ev.target.result.byteLength / CHUNK_SIZE);
+    const chunkCount = parseInt(ev.target.result.byteLength / CHUNK_SIZE);
     console.log(chunkCount);
     console.log("Read successfully");
 
@@ -87,10 +86,10 @@ fileForm.addEventListener("submit", async (e) => {
       console.log(fileName);
       let sent = 0;
       let chunkID;
-      for (chunkID = 0; chunkID < chunkCount; chunkID++) {
+      for (chunkID = 0; chunkID < chunkCount + 1; chunkID++) {
         console.log(chunkID);
         let chunk;
-        if (chunkID == chunkCount - 1) {
+        if (chunkID == chunkCount) {
           chunk = ev.target.result.slice(chunkID * CHUNK_SIZE);
         } else {
           chunk = ev.target.result.slice(
@@ -100,8 +99,11 @@ fileForm.addEventListener("submit", async (e) => {
         }
         console.log("Chunk byteLength: ", chunk.byteLength);
         sent += chunk.byteLength;
-        const firstChunk = chunkID === 0;
-
+        firstChunk = false;
+        if (chunkID == 0) {
+          firstChunk = true;
+        }
+        // reason for await is we want to wait for server's response and not flood the backend with all requests.
         const response = await fetch(`${window.ENV.API_URL}/video/`, {
           method: "POST",
           headers: {
@@ -109,7 +111,7 @@ fileForm.addEventListener("submit", async (e) => {
             "content-length": chunk.length,
             "file-name": fileName,
             "file-size": ev.target.result.byteLength,
-            "first-chunk": firstChunk.toString(),
+            "first-chunk": firstChunk,
             title: title,
             description: description,
           },
@@ -124,7 +126,7 @@ fileForm.addEventListener("submit", async (e) => {
         )} %`;
       }
 
-      if (chunkID >= chunkCount) {
+      if (chunkID >= chunkCount + 1) {
         divOutput.append(
           ". Your video will be available in few minutes on List Files page."
         );
