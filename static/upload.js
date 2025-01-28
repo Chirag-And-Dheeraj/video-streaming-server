@@ -8,7 +8,29 @@ const titleError = document.getElementById("titleError");
 const descriptionError = document.getElementById("descriptionError");
 const uploadVideoButton = document.getElementById("uploadVideoButton");
 
-fileForm.addEventListener("submit", (e) => {
+function checkFileType(file) {
+  const supportedTypes = JSON.parse(
+    localStorage.getItem("SUPPORTED_FILE_TYPES")
+  );
+
+  if (
+    !supportedTypes.some(
+      (supportedType) => supportedType.file_type === file.type
+    )
+  ) {
+    console.log(file.type);
+    const supportedExtensions = supportedTypes
+      .map((type) => type.file_extension)
+      .join(", ");
+
+    fileError.textContent = `Only ${supportedExtensions} files are supported`;
+    fileError.style.display = "block";
+    return false;
+  }
+  return true;
+}
+
+fileForm.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const title = titleElement.value;
@@ -29,13 +51,11 @@ fileForm.addEventListener("submit", (e) => {
 
   const fileReader = new FileReader();
   const theFile = video.files[0];
-  const type = theFile.type;
   const size = theFile.size;
 
-  if (type !== "video/mp4" && type !== "video/x-matroska") {
-    console.log(type);
-    fileError.textContent = "Only .mp4 and .mkv files are supported";
-    fileError.style.display = "block";
+  console.log(`file type = ${theFile.type}`);
+
+  if (!checkFileType(theFile)) {
     return;
   }
 
@@ -100,8 +120,10 @@ fileForm.addEventListener("submit", (e) => {
 
         console.log(await response.text());
 
-        divOutput.textContent =
-          Math.round((sent / ev.target.result.byteLength) * 100, 0) + " %";
+        divOutput.textContent = `${Math.round(
+          (sent / ev.target.result.byteLength) * 100,
+          0
+        )} %`;
       }
 
       if (chunkID >= chunkCount + 1) {
@@ -109,7 +131,7 @@ fileForm.addEventListener("submit", (e) => {
           ". Your video will be available in few minutes on List Files page."
         );
       }
-      console.log("Successfully sent " + sent + " from the client.");
+      console.log(`Successfully sent ${sent} bytes from the client.`);
     });
   };
 

@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"time"
+	"video-streaming-server/config"
 	"video-streaming-server/controllers"
 	"video-streaming-server/database"
 	"video-streaming-server/middleware"
@@ -154,14 +155,33 @@ func watchPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func configHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
-		response := map[string]interface{}{
-			"FILE_SIZE_LIMIT": os.Getenv("FILE_SIZE_LIMIT"),
-		}
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(response)
+	fileSizeLimit := os.Getenv("FILE_SIZE_LIMIT")
+	if fileSizeLimit == "" {
+		http.Error(w, "File size limit not configured", http.StatusInternalServerError)
+		return
+	}
+
+	supportedFileTypes := []config.FileType{
+		{FileType: "video/mp4", FileExtension: ".mp4"},
+		{FileType: "video/x-matroska", FileExtension: ".mkv"},
+		{FileType: "video/quicktime", FileExtension: ".mov"},
+	}
+
+	response := config.ConfigResponse{
+		FileSizeLimit:      fileSizeLimit,
+		SupportedFileTypes: supportedFileTypes,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}
 }
 
