@@ -166,16 +166,15 @@ main section textarea,
 
 .progress-container {
   width: 100%;
-  background-color: #333; /* Dark background to match your theme */
+  background-color: #333;
   border-radius: 5px;
   margin: 1em 0;
-  display: none; /* Hidden by default */
+  display: none;
 }
 
 .progress-bar {
-  width: 0; /* Starts at 0 width */
-  height: 10px; /* Thin bar */
-  background-color: #a0a0ff; /* Your special red color */
+  width: 0;
+  height: 10px;
+  background-color: #a0a0ff;
   border-radius: 5px;
-  /* transition: width 0.5s ease; Smooth animation */
 }
