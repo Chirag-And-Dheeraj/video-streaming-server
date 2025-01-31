@@ -163,3 +163,19 @@ main section textarea,
 .logout {
   cursor: pointer;
 }
+
+.progress-container {
+  width: 100%;
+  background-color: #333; /* Dark background to match your theme */
+  border-radius: 5px;
+  margin: 1em 0;
+  display: none; /* Hidden by default */
+}
+
+.progress-bar {
+  width: 0; /* Starts at 0 width */
+  height: 10px; /* Thin bar */
+  background-color: #a0a0ff; /* Your special red color */
+  border-radius: 5px;
+  /* transition: width 0.5s ease; Smooth animation */
+}

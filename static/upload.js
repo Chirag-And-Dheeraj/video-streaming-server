@@ -7,6 +7,8 @@ const fileError = document.getElementById("fileError");
 const titleError = document.getElementById("titleError");
 const descriptionError = document.getElementById("descriptionError");
 const uploadVideoButton = document.getElementById("uploadVideoButton");
+const progressContainer = document.getElementById("progressContainer");
+const progressBar = document.getElementById("progressBar");
 
 function checkFileType(file) {
   const supportedTypes = JSON.parse(
@@ -71,6 +73,9 @@ fileForm.addEventListener("submit", async (e) => {
   titleError.style.display = "none";
   descriptionError.style.display = "none";
   fileError.style.display = "none";
+  progressContainer.style.display = "block";
+  progressBar.style.width = "0%";
+  divOutput.textContent = "Uploading...";
 
   uploadVideoButton.disabled = true;
 
@@ -124,11 +129,16 @@ fileForm.addEventListener("submit", async (e) => {
           (sent / ev.target.result.byteLength) * 100,
           0
         )} %`;
+
+        const progress = Math.round((sent / ev.target.result.byteLength) * 100);
+        progressBar.style.width = `${progress}%`;
+        divOutput.textContent = `${progress}%`;
       }
 
       if (chunkID >= chunkCount + 1) {
+        progressBar.style.width = "100%";
         divOutput.append(
-          ". Your video will be available in few minutes on List Files page."
+          ". Upload complete! Your video will be available soon on the List Files page"
         );
       }
       console.log(`Successfully sent ${sent} bytes from the client.`);
