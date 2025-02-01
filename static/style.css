@@ -163,3 +163,18 @@ main section textarea,
 .logout {
   cursor: pointer;
 }
+
+.progress-container {
+  width: 100%;
+  background-color: #333;
+  border-radius: 5px;
+  margin: 1em 0;
+  display: none;
+}
+
+.progress-bar {
+  width: 0;
+  height: 10px;
+  background-color: #a0a0ff;
+  border-radius: 5px;
+}
