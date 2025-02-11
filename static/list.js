@@ -8,7 +8,7 @@ window.onload = async () => {
   console.log(videos);
 
   if(videos.length > 0) {
-    let videoListSection = document.getElementById("video_list");
+    let videoListSection = document.querySelector(".video-list");
 
     for (let i = 0; i < videos.length; i++) {
       let videoTitleText = document.createTextNode(videos[i].title);

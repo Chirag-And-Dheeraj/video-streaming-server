@@ -2,7 +2,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  /* border: solid red 2px; */
+  border: solid red 2px;
 }
 
 body {
@@ -177,4 +177,8 @@ main section textarea,
   height: 10px;
   background-color: #a0a0ff;
   border-radius: 5px;
+}
+
+.video-list {
+  border: solid blue 2px;
 }
