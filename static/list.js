@@ -5,7 +5,6 @@ window.onload = async () => {
 
   let videos = await response.json();
 
-  console.log(videos);
 
   if (videos.length > 0) {
     let videoListSection = document.getElementById("video_list");
@@ -39,7 +38,7 @@ window.onload = async () => {
       videoListRow.classList.add("hunter");
 
       videoListRow.appendChild(videoThumbnail);
-
+        
       videoListRow.appendChild(videoTitle);
       videoListRow.appendChild(videoDescription);
       videoListRow.appendChild(videoLink);
