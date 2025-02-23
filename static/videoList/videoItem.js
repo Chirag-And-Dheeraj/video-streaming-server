@@ -10,8 +10,8 @@ class VideoItem extends HTMLElement {
                 justify-content: space-between;
                 padding: 1rem;
                 border-radius: 8px;
-                background-color: #f5f5f5;
-                color: black;
+                background-color:#262626;
+                color: white;
                 margin-bottom: 1rem;
                 width: 100%;
                 cursor: pointer;
@@ -20,7 +20,6 @@ class VideoItem extends HTMLElement {
             .thumbnail-container {
                 width: 200px;
                 height: 150px;
-                border: 2px solid #ccc;
                 overflow: hidden;
             }
 
@@ -74,11 +73,11 @@ class VideoItem extends HTMLElement {
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background-color: white;
+                background-color: #262626;
                 padding: 2rem;
                 border-radius: 8px;
                 text-align: center;
-                color: black;
+                color: white;
             }
 
             .modal-actions {
@@ -94,7 +93,7 @@ class VideoItem extends HTMLElement {
     template.innerHTML = `
         <div class="video-item">
             <div class="thumbnail-container">
-                <img src="../static/logo/android-chrome-192x192.png" alt="lol"/>
+                <img class="thumbnail" alt="thumbnail"/>
             </div>
             <div class="content">
                 <h3 class="name"></h3>
@@ -129,18 +128,12 @@ class VideoItem extends HTMLElement {
   }
 
   initialize() {
-    // Set up event delegation
     this.shadowRoot.addEventListener("click", (e) => {
       const target = e.target;
-
-      // Check if click was on delete button
       if (target.classList.contains("delete-modal")) {
-        e.stopPropagation(); // Prevent bubbling to parent
-        // this.handleDelete(target); // Pass the button element
+        e.stopPropagation();
         return;
       }
-
-      // Click anywhere else in video-item plays the video
       if (target.closest(".video-item")) {
         e.preventDefault();
         this.handlePlay();
@@ -154,7 +147,6 @@ class VideoItem extends HTMLElement {
     const deleteButton = modal.querySelector(".delete");
     const fileNameElement = modal.querySelector(".name");
 
-    // Show modal when delete button clicked
     this.shadowRoot.addEventListener("click", (e) => {
       if (e.target.classList.contains("delete-modal")) {
         e.stopPropagation();
@@ -164,7 +156,6 @@ class VideoItem extends HTMLElement {
       }
     });
 
-    // Handle modal actions
     cancelButton.addEventListener("click", () => {
       modal.style.display = "none";
     });
@@ -174,7 +165,6 @@ class VideoItem extends HTMLElement {
       this.handleDelete();
     });
 
-    // Close modal when clicking outside
     modal.addEventListener("click", (e) => {
       if (e.target === modal) {
         modal.style.display = "none";
@@ -217,7 +207,7 @@ class VideoItem extends HTMLElement {
     const element = this.shadow.querySelector(`.${name}`);
     if (element) {
       if (name === "thumbnail") {
-        // element.src = newValue;
+        element.src = newValue;
       } else if (name === "name") {
         element.textContent = newValue;
       } else if (name === "description") {
@@ -227,7 +217,6 @@ class VideoItem extends HTMLElement {
   }
 
   disconnectedCallback() {
-    // Clean up the single event listener
     this.shadowRoot.removeEventListener(
       "click",
       this.shadowRoot.lastEventCallback

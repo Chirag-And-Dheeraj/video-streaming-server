@@ -7,15 +7,15 @@ import (
 )
 
 type Stream struct {
-	CodecName     string `json:"codec_name"`
-	CodecType     string `json:"codec_type"`
+	CodecName string `json:"codec_name"`
+	CodecType string `json:"codec_type"`
 }
 
 type Format struct {
-	Filename string            `json:"filename"`
-	Duration string            `json:"duration"`
-	BitRate  string            `json:"bit_rate"`
-	Size     string            `json:"size"`
+	Filename string `json:"filename"`
+	Duration string `json:"duration"`
+	BitRate  string `json:"bit_rate"`
+	Size     string `json:"size"`
 }
 
 type FFProbeOutput struct {
@@ -27,6 +27,7 @@ type Video struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	Thumbnail   string `json:"thumbnail"`
 }
 
 type Session struct {

@@ -21,12 +21,9 @@ class VideoList extends HTMLElement {
     `;
 
     this.shadow.appendChild(style);
-
     this.container = document.createElement("div");
     this.container.className = "video-container";
     this.shadow.appendChild(this.container);
-
-    // this.render();
   }
 
   async connectedCallback() {
@@ -59,24 +56,18 @@ class VideoList extends HTMLElement {
                 <video-item
                     name="${video.title}"
                     description="${video.description}"
-                    thumbnail="${video.thumbnail}"
+                    thumbnail="${
+                      video.thumbnail != null && video.thumbnail !== ""
+                        ? video.thumbnail
+                        : "../static/logo/android-chrome-192x192.png"
+                    }"
                     video-id="${video.id}"
                 ></video-item>
             `
         )
         .join("");
     }
-
-    // Clear existing content
-    // this.shadowRoot.innerHTML = "";
-
-    // Create container and append content
-    // const container = document.createElement("div");
-    // container.className = "video-container";
     this.container.innerHTML = content;
-
-    // Append to shadow root
-    // this.shadowRoot.appendChild(container);
   }
 }
 

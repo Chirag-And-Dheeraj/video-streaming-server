@@ -143,7 +143,8 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		SELECT
 			video_id,
 			title,
-			description
+			description,
+			COALESCE(thumbnail, '') as thumbnail
 		FROM
 			videos
 		WHERE
@@ -151,7 +152,9 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		AND 
 			delete_flag=0
 		AND
-			user_id=$1;
+			user_id=$1
+		ORDER BY
+			upload_initiate_time DESC;
 	`)
 
 	if err != nil {
@@ -176,11 +179,13 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		var id string
 		var title string
 		var description string
+		var thumbnail string
 
-		err := rows.Scan(&id, &title, &description)
+		err := rows.Scan(&id, &title, &description, &thumbnail)
 
 		if err != nil {
 			log.Println("Error scanning rows")
+			log.Println(err)
 			http.Error(w, "Error retreiving records", http.StatusInternalServerError)
 			return
 		}
@@ -189,6 +194,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			ID:          id,
 			Title:       title,
 			Description: description,
+			Thumbnail:   thumbnail,
 		}
 
 		records = append(records, record)
