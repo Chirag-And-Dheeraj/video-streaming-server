@@ -4,12 +4,8 @@ class VideoList extends HTMLElement {
     this.shadow = this.attachShadow({ mode: "open" });
 
     const style = document.createElement("style");
-    style.textContent = `
-        :host {
-                display: block; /* Make the host element visible */
-                min-height: 100vh;
-            }    
-        .video-list {
+    style.textContent = `  
+        .video-container {
             display: grid;
             gap: 1rem;
             padding: 1rem;
@@ -27,7 +23,7 @@ class VideoList extends HTMLElement {
     this.shadow.appendChild(style);
 
     this.container = document.createElement("div");
-    this.container.className = "video-list";
+    this.container.className = "video-container";
     this.shadow.appendChild(this.container);
 
     // this.render();
@@ -76,7 +72,7 @@ class VideoList extends HTMLElement {
 
     // Create container and append content
     // const container = document.createElement("div");
-    // container.className = "video-list";
+    // container.className = "video-container";
     this.container.innerHTML = content;
 
     // Append to shadow root
@@ -84,4 +80,4 @@ class VideoList extends HTMLElement {
   }
 }
 
-customElements.define("video-list", VideoList);
+customElements.define("video-container", VideoList);
