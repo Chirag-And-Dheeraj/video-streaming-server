@@ -1,3 +1,10 @@
+#!make
+include .env
+
+pwd := $(shell pwd)
+up ?= 1
+down ?= 1
+
 # Ensure we're in a Unix-like environment
 ifeq (, $(shell which uname))
 $(error This Makefile requires a Unix-like environment)
@@ -80,3 +87,26 @@ cleanstart:
 	make clean || exit 1
 	make init || exit 1
 	make start || exit 1
+
+migration:
+	docker run \
+	--rm \
+	-v $(pwd)/database/migrations:/migrations migrate/migrate create \
+	-ext sql \
+	-dir /migrations \
+	-seq $(name)
+	sudo chmod 666 $(pwd)/database/migrations/*_$(name).up.sql $(pwd)/database/migrations/*_$(name).down.sql
+
+migrate-up:
+	docker run \
+	-v $(pwd)/database/migrations:/migrations \
+	--network video-streaming-server_default migrate/migrate \
+	-path=/migrations/ \
+	-database "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" up $(up)
+
+migrate-down:
+	docker run \
+	-v $(pwd)/database/migrations:/migrations \
+	--network video-streaming-server_default migrate/migrate \
+	-path=/migrations/ \
+	-database "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" down $(down)
