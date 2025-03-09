@@ -1,123 +1,188 @@
 class VideoItem extends HTMLElement {
   constructor() {
     super();
-    this.shadow = this.attachShadow({ mode: "open" });
+    this.shadow = this.attachShadow({
+      mode: "open"
+    });
     const style = document.createElement("style");
     style.textContent = `
-            .video-item {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                padding: 1rem;
-                border-radius: 8px;
-                background-color:#262626;
-                color: white;
-                margin-bottom: 1rem;
-                width: 100%;
-                cursor: pointer;
-            }
+          .video-item {
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              padding: 1rem;
+              border-radius: 8px;
+              background-color:#262626;
+              color: white;
+              margin-bottom: 1rem;
+              width: 100%;
+              cursor: pointer;
+          }
 
-            .thumbnail-container {
-                width: 200px;
-                height: 150px;
-                overflow: hidden;
-            }
+          .thumbnail-container {
+              width: 200px;
+              height: 150px;
+              overflow: hidden;
+          }
 
-            .thumbnail-container img {
-                width: 100%;
-                height: 100%;
-                object-fit: content;
-            }
+          .thumbnail-container img {
+              width: 100%;
+              height: 100%;
+              object-fit: content;
+          }
 
-            .content {
-                flex: 0 0 auto; /* Prevent growing/shrinking */
-                text-align: left;
-                padding: 0 1rem;
-            }
+          .content {
+              flex: 0 0 auto; /* Prevent growing/shrinking */
+              text-align: left;
+              padding: 0 1rem;
+          }
 
-            .actions {
-                display: flex;
-                gap: 0.5rem;
-                margin-left: auto; /* Push to right */
-                padding: 1em;
-            }
+          .actions {
+              display: flex;
+              gap: 0.5rem;
+              margin-left: auto; /* Push to right */
+              padding: 1em;
+          }
 
-            .action-button {
-                padding: 0.5rem 0.75rem;
-                border-radius: 4px;
-                text-decoration: none;
-                color: white;
-                font-weight: 500;
-                cursor: pointer;
-                border: none;
-                background-color: #141414;
-            }
+          .action-button {
+              padding: 0.5rem 0.75rem;
+              border-radius: 4px;
+              text-decoration: none;
+              color: white;
+              font-weight: 500;
+              cursor: pointer;
+              border: none;
+              background-color: #141414;
+          }
 
-            .delete-modal, .delete {
-                background-color: #ff4444;
-            }
+          .delete-modal, .delete {
+              background-color: #ff4444;
+          }
 
-            .modal {
-                display: none;
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: rgba(0, 0, 0, 0.5);
-                z-index: 1000;
-            }
+          .modal {
+              display: none;
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background-color: rgba(0, 0, 0, 0.5);
+              z-index: 1000;
+          }
 
-            .modal-content {
-                position: absolute;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                background-color: #262626;
-                padding: 2rem;
-                border-radius: 8px;
-                text-align: center;
-                color: white;
-            }
+          .modal-content {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              background-color: #262626;
+              padding: 2rem;
+              border-radius: 8px;
+              text-align: center;
+              color: white;
+          }
 
-            .modal-actions {
-                display: flex;
-                justify-content: center;
-                gap: 1rem;
-                margin-top: 1rem;
-            }
-        `;
+          .modal-actions {
+              display: flex;
+              justify-content: center;
+              gap: 1rem;
+              margin-top: 1rem;
+          }
+
+          .thumbnail-container {
+              position: relative; /* Added for overlay positioning */
+              width: 200px;
+              height: 150px;
+              overflow: hidden;
+          }
+
+          .thumbnail-container img {
+              width: 100%;
+              height: 100%;
+              object-fit: content;
+          }
+
+          .video-item:hover .thumbnail-container::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background-color: rgba(0, 0, 0, 0.5);
+              opacity: 1;
+              transition: opacity 0.3s ease;
+          }
+
+          .thumbnail-container:hover::before {
+              opacity: 1;
+          }
+
+          .play-button {
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) scale(0.8);
+              opacity: 0;
+              transition: all 0.3s ease;
+              background: rgba(255, 255, 255, 0.1);
+              border: 2px solid white;
+              border-radius: 50%;
+              width: 48px;
+              height: 48px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+          }
+
+          .play-button::after {
+              content: '▶';
+              color: white;
+              font-size: 30px;
+          }
+
+          .video-item:hover .play-button {
+              opacity: 1;
+              transform: translate(-50%, -50%) scale(1);
+          }
+
+          .play-button:hover {
+              background: rgba(255, 255, 255, 0.2);
+          }
+      `;
 
     const template = document.createElement("template");
 
     template.innerHTML = `
-        <div class="video-item">
-            <div class="thumbnail-container">
-                <img class="thumbnail" alt="thumbnail"/>
-            </div>
-            <div class="content">
-                <h3 class="name"></h3>
-                <p class="description"></p>
-            </div>
-            <div class="actions">
-                <button class="action-button delete-modal">Delete</button>
-            </div>
-        </div>
-    `;
+      <div class="video-item">
+          <div class="thumbnail-container">
+              <img class="thumbnail" alt="thumbnail"/>
+              <button class="play-button"></button>
+          </div>
+          <div class="content">
+              <h3 class="name"></h3>
+              <p class="description"></p>
+          </div>
+          <div class="actions">
+              <button class="action-button delete-modal">Delete</button>
+          </div>
+      </div>
+  `;
 
     const modalTemplate = document.createElement("template");
     modalTemplate.innerHTML = `
-        <div class="modal" id="deleteConfirmModal">
-            <div class="modal-content">
-                <p>Are you sure you want to delete the following file:</p>
-                <h3 class="name"></h3>
-                <div class="modal-actions">
-                    <button class="action-button cancel">Cancel</button>
-                    <button class="action-button delete">Delete</button>
-                </div>
-            </div>
-        </div>
-    `;
+      <div class="modal" id="deleteConfirmModal">
+          <div class="modal-content">
+              <p>Are you sure you want to delete the following file:</p>
+              <h3 class="name"></h3>
+              <div class="modal-actions">
+                  <button class="action-button cancel">Cancel</button>
+                  <button class="action-button delete">Delete</button>
+              </div>
+          </div>
+      </div>
+  `;
 
     this.shadow.appendChild(style);
 
