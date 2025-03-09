@@ -127,19 +127,19 @@ class VideoItem extends HTMLElement {
               transition: all 0.3s ease;
               background: rgba(255, 255, 255, 0.1);
               border: 2px solid white;
-              border-radius: 50%;
-              width: 48px;
-              height: 48px;
+              width: 60px;
+              height: 60px;
               display: flex;
               align-items: center;
               justify-content: center;
               cursor: pointer;
+              text-align: center;
           }
 
-          .play-button::after {
+          .play-button::before {
               content: '▶';
               color: white;
-              font-size: 30px;
+              font-size: 25px;
           }
 
           .video-item:hover .play-button {
