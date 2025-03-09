@@ -49,6 +49,154 @@ func LoadEnvVars() {
 	log.Println("Environment variables set.")
 }
 
+func extractThumbnail(videoPath string, fileName string) (string, error) {
+	log.Println("Extracting thumbnail")
+
+	if err := os.Mkdir(fmt.Sprintf("thumbnails/%s", fileName), os.ModePerm); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Println("Created directory inside thumbnail folder.")
+
+	log.Println("Video path: " + videoPath)
+
+	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-frames:v", "1", os.Getenv("ROOT_PATH")+"/thumbnails/"+fileName+"/"+fileName+"_thumbnail.png")
+
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		log.Println("Thumbnail extraction failed:" + string(output))
+		log.Println(err)
+		return "", err
+	} else {
+		return os.Getenv("ROOT_PATH") + "/thumbnails/" + fileName + "/" + fileName + "_thumbnail.png", nil
+	}
+}
+
+func uploadThumbnailToAppwrite(folderName string, db *sql.DB) {
+	log.Println("Uploading thumbnail of " + folderName + "to Appwrite")
+	files, err := os.ReadDir(fmt.Sprintf("thumbnails/%s", folderName))
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	if len(files) == 0 {
+		err = os.Remove("thumbnails/" + folderName)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	fileToUpload, err := os.ReadFile(fmt.Sprintf("thumbnails/%s/%s", folderName, files[0].Name()))
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files"
+
+	var requestBody bytes.Buffer
+	writer := multipart.NewWriter(&requestBody)
+	fileComps := strings.Split(files[0].Name(), ".")
+	fileId := GetFileId(fileComps[0])
+
+	err = writer.WriteField("fileId", fileId)
+	if err != nil {
+		log.Println(err)
+	}
+
+	part, err := writer.CreateFormFile("file", files[0].Name())
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	_, err = part.Write(fileToUpload)
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	err = writer.Close()
+
+	if err != nil {
+		log.Println(err)
+	}
+
+	request, err := http.NewRequest("POST", uploadRequestURL, &requestBody)
+	if err != nil {
+		log.Printf("Error creating request")
+		log.Println(err)
+	}
+
+	request.Header.Set("Content-Type", writer.FormDataContentType())
+	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		log.Println(err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != 201 {
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Println(err)
+		}
+		log.Println("Response body from Appwrite:" + string(body))
+		log.Println("Status code from Appwrite" + string(response.StatusCode))
+	} else {
+		var uploadResponse types.ThumbnailUploadResponse
+		err := json.NewDecoder(response.Body).Decode(&uploadResponse)
+		if err != nil {
+			log.Printf("Failed to decode Appwrite response: %v\n", err)
+			return
+		}
+		log.Printf("File uploaded successfully. ID: %s, BucketID: %s\n",
+			uploadResponse.ID, uploadResponse.BucketID)
+		err = os.Remove("thumbnails/" + folderName + "/" + files[0].Name())
+		if err != nil {
+			log.Println(err)
+		}
+
+		log.Println("Updating thumbnail URL in database record...")
+		updateStatement, err := db.Prepare(`
+			UPDATE
+				videos
+			SET
+				thumbnail=$1
+			WHERE
+				video_id=$2;
+		`)
+
+		if err != nil {
+			log.Println(err)
+		}
+
+		thumbnailURL := fmt.Sprintf("https://cloud.appwrite.io/v1/storage/buckets/%s/files/%s/view?project=%s", uploadResponse.BucketID, uploadResponse.ID, os.Getenv("APPWRITE_PROJECT_ID"))
+
+		log.Println("Thumbnail view URL: " + thumbnailURL)
+
+		_, err = updateStatement.Exec(thumbnailURL, folderName)
+		if err != nil {
+			log.Println(err)
+		} else {
+			log.Println("Database record updated.")
+			log.Println("Finished uploading thumbnail", folderName, " :)")
+		}
+	}
+
+	err = os.Remove("thumbnails/" + folderName)
+	if err != nil {
+		log.Println(err)
+	}
+
+}
+
 func breakFile(videoPath string, fileName string) bool {
 	log.Println("Inside BreakFile function.")
 
@@ -258,6 +406,16 @@ func closeVideoFile(tmpFile *os.File) {
 
 func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.File, db *sql.DB) {
 	log.Println("Received all chunks for: " + serverFileName)
+
+	extractedThumbnail, err := extractThumbnail(("./video/" + serverFileName), fileName)
+
+	if err != nil {
+		log.Println("Error extractiong thumbnail for video " + fileName)
+	} else {
+		log.Println("Extracted thumbnail " + extractedThumbnail)
+		uploadThumbnailToAppwrite(fileName, db)
+	}
+
 	log.Println("Breaking the video into .ts files.")
 
 	breakResult := breakFile(("./video/" + serverFileName), fileName)
@@ -334,6 +492,35 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	deleteUrl := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/"
 
+	thumbnailFile := videoId + "_thumbnail.png"
+
+	thumbnailFileName := strings.Split(thumbnailFile, ".")[0]
+
+	thumbnailFileId := GetFileId(thumbnailFileName)
+
+	request, err := http.NewRequest("DELETE", deleteUrl+thumbnailFileId, nil)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Chunk", http.StatusInternalServerError)
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Thumbnail", http.StatusInternalServerError)
+		return
+	}
+	defer response.Body.Close()
+
 	for i := 0; i < len(lines); i++ {
 		if strings.HasSuffix(lines[i], ".ts") {
 			fileName := strings.Split(lines[i], ".")[0]
@@ -366,7 +553,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	log.Println("Deleted all .ts files...")
 
-	request, err := http.NewRequest("DELETE", deleteUrl+videoId, nil)
+	request, err = http.NewRequest("DELETE", deleteUrl+videoId, nil)
 
 	if err != nil {
 		log.Println(err)
@@ -379,9 +566,9 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
 	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
 
-	client := &http.Client{}
+	client = &http.Client{}
 
-	response, err := client.Do(request)
+	response, err = client.Do(request)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)

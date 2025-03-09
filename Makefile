@@ -43,6 +43,7 @@ clean:
 	@echo "Cleaning up directories and files..."
 	@if [ -d "video" ]; then rm -r video; fi
 	@if [ -d "segments" ]; then rm -r segments; fi
+	@if [ -d "thumbnails" ]; then rm -r thumbnails; fi
 	@echo "Clean up complete."
 
 # Initialize directories
@@ -50,6 +51,7 @@ init:
 	@echo "Initializing directories..."
 	@mkdir -p video
 	@mkdir -p segments
+	@mkdir -p thumbnails
 	@echo "Initialization complete."
 
 start-postgres:

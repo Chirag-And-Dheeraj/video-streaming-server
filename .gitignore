@@ -3,6 +3,7 @@
 .env.prod
 video/
 segments/
+thumbnails/
 database.db
 main
 .vscode/
