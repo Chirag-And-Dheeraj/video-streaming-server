@@ -125,8 +125,8 @@ class VideoItem extends HTMLElement {
               transform: translate(-50%, -50%) scale(0.8);
               opacity: 0;
               transition: all 0.3s ease;
-              background: rgba(255, 255, 255, 0.1);
-              border: 2px solid white;
+              border: none;
+              background: none;
               width: 60px;
               height: 60px;
               display: flex;
