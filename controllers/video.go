@@ -144,7 +144,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			video_id,
 			title,
 			description,
-			COALESCE(thumbnail, '') as thumbnail
+			thumbnail
 		FROM
 			videos
 		WHERE
@@ -173,13 +173,13 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	log.Println("Query executed.")
 
-	records := make([]Video, 0)
+	records := make([]ListVideosResponseItem, 0)
 
 	for rows.Next() {
 		var id string
 		var title string
 		var description string
-		var thumbnail string
+		var thumbnail sql.NullString
 
 		err := rows.Scan(&id, &title, &description, &thumbnail)
 
@@ -190,11 +190,16 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			return
 		}
 
-		record := Video{
+		thumbValue := "../static/logo/android-chrome-192x192.png"
+		if thumbnail.Valid && thumbnail.String != "" {
+			thumbValue = thumbnail.String
+		}
+
+		record := ListVideosResponseItem{
 			ID:          id,
 			Title:       title,
 			Description: description,
-			Thumbnail:   thumbnail,
+			Thumbnail: thumbValue,
 		}
 
 		records = append(records, record)

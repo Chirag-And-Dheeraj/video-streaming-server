@@ -2,6 +2,7 @@ package types
 
 import (
 	"time"
+	"database/sql"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -27,7 +28,7 @@ type Video struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
-	Thumbnail   string `json:"thumbnail"`
+	Thumbnail   sql.NullString `json:"thumbnail"`
 }
 
 type Session struct {
@@ -44,6 +45,19 @@ type User struct {
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
 }
+
+type ThumbnailUploadResponse struct {
+	ID       string `json:"$id"`
+	BucketID string `json:"bucketId"`
+}
+
+type ListVideosResponseItem struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Thumbnail   string `json:"thumbnail"`
+}
+
 
 func NewUser(username, email, password string) (*User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

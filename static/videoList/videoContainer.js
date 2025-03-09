@@ -56,11 +56,7 @@ class VideoList extends HTMLElement {
                 <video-item
                     name="${video.title}"
                     description="${video.description}"
-                    thumbnail="${
-                      video.thumbnail != null && video.thumbnail !== ""
-                        ? video.thumbnail
-                        : "../static/logo/android-chrome-192x192.png"
-                    }"
+                    thumbnail="${video.thumbnail}"
                     video-id="${video.id}"
                 ></video-item>
             `

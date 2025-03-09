@@ -73,11 +73,6 @@ func extractThumbnail(videoPath string, fileName string) (string, error) {
 	}
 }
 
-type ThumbnailUploadResponse struct {
-	ID       string `json:"$id"`
-	BucketID string `json:"bucketId"`
-}
-
 func uploadThumbnailToAppwrite(folderName string, db *sql.DB) {
 	log.Println("Uploading thumbnail of " + folderName + "to Appwrite")
 	files, err := os.ReadDir(fmt.Sprintf("thumbnails/%s", folderName))
@@ -155,7 +150,7 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) {
 		log.Println("Response body from Appwrite:" + string(body))
 		log.Println("Status code from Appwrite" + string(response.StatusCode))
 	} else {
-		var uploadResponse ThumbnailUploadResponse
+		var uploadResponse types.ThumbnailUploadResponse
 		err := json.NewDecoder(response.Body).Decode(&uploadResponse)
 		if err != nil {
 			log.Printf("Failed to decode Appwrite response: %v\n", err)
@@ -416,11 +411,10 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 
 	if err != nil {
 		log.Println("Error extractiong thumbnail for video " + fileName)
+	} else {
+		log.Println("Extracted thumbnail " + extractedThumbnail)
+		uploadThumbnailToAppwrite(fileName, db)
 	}
-
-	log.Println("Extracted thumbnail " + extractedThumbnail)
-
-	uploadThumbnailToAppwrite(fileName, db)
 
 	log.Println("Breaking the video into .ts files.")
 

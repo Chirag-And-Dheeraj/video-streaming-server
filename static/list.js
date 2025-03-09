@@ -19,7 +19,7 @@ window.onload = async () => {
       let deleteLink = document.createElement("a");
       let videoThumbnail = document.createElement("img");
 
-      videoThumbnail.src = "http://127.0.0.1:8000/static/logo/dekho_logo.svg";
+      videoThumbnail.src = `${window.ENV.API_URL}/static/logo/dekho_logo.svg`;
 
       videoLink.setAttribute(
         "href",
