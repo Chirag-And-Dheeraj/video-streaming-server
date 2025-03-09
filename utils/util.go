@@ -492,6 +492,35 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	deleteUrl := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/"
 
+	thumbnailFile := videoId + "_thumbnail.png"
+
+	thumbnailFileName := strings.Split(thumbnailFile, ".")[0]
+
+	thumbnailFileId := GetFileId(thumbnailFileName)
+
+	request, err := http.NewRequest("DELETE", deleteUrl+thumbnailFileId, nil)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Chunk", http.StatusInternalServerError)
+		return
+	}
+
+	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
+	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
+	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+
+	client := &http.Client{}
+
+	response, err := client.Do(request)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Deleting Thumbnail", http.StatusInternalServerError)
+		return
+	}
+	defer response.Body.Close()
+
 	for i := 0; i < len(lines); i++ {
 		if strings.HasSuffix(lines[i], ".ts") {
 			fileName := strings.Split(lines[i], ".")[0]
@@ -524,7 +553,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	log.Println("Deleted all .ts files...")
 
-	request, err := http.NewRequest("DELETE", deleteUrl+videoId, nil)
+	request, err = http.NewRequest("DELETE", deleteUrl+videoId, nil)
 
 	if err != nil {
 		log.Println(err)
@@ -537,9 +566,9 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
 	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
 
-	client := &http.Client{}
+	client = &http.Client{}
 
-	response, err := client.Do(request)
+	response, err = client.Do(request)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Error Deleting Video", http.StatusInternalServerError)

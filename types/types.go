@@ -1,8 +1,8 @@
 package types
 
 import (
-	"time"
 	"database/sql"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -25,9 +25,9 @@ type FFProbeOutput struct {
 }
 
 type Video struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+	ID          string         `json:"id"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
 	Thumbnail   sql.NullString `json:"thumbnail"`
 }
 
@@ -57,7 +57,6 @@ type ListVideosResponseItem struct {
 	Description string `json:"description"`
 	Thumbnail   string `json:"thumbnail"`
 }
-
 
 func NewUser(username, email, password string) (*User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

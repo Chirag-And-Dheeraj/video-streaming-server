@@ -199,7 +199,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			ID:          id,
 			Title:       title,
 			Description: description,
-			Thumbnail: thumbValue,
+			Thumbnail:   thumbValue,
 		}
 
 		records = append(records, record)
