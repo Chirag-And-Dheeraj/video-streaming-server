@@ -353,6 +353,30 @@ func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.Write(bodyBytes)
 }
 
+// @desc Update Video Details
+// @route UPDATE
+func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	videoId := r.URL.Path[len("/video/"):]
+	log.Println(videoId)
+
+	if videoId == "" {
+		http.Error(w, "Missing 'id' query parameter", http.StatusBadRequest)
+		return
+	}
+
+	var reqBody UpdateRequest
+	err := json.NewDecoder(r.Body).Decode(&reqBody)
+	if err != nil {
+		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+
+	log.Println(reqBody)
+
+	
+	
+}
+
 // @desc Delete the video
 // @route DELETE /video/[id]
 func DeleteHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
