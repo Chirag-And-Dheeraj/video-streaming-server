@@ -146,10 +146,6 @@ class VideoItem extends HTMLElement {
               opacity: 1;
               transform: translate(-50%, -50%) scale(1);
           }
-
-          .play-button:hover {
-              background: rgba(255, 255, 255, 0.2);
-          }
       `;
 
     const template = document.createElement("template");
