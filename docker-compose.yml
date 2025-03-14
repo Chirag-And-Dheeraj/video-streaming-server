@@ -18,6 +18,7 @@ services:
       - dekho-postgres
     volumes:
       - ./:/app
+    command: ./scripts/start_dev.sh
 
   dekho-postgres:
     container_name: dekho-postgres
