@@ -85,10 +85,6 @@ func Connect(config *DBConfig) (*sql.DB, error) {
 
 	log.Println("Database connection established.")
 
-	// err = initializeTables(db)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to initialize tables: %w", err)
-	// }
 
 	log.Println("Database initialized.")
 	return db, nil
