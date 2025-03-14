@@ -2,15 +2,12 @@
 include .env
 
 pwd := $(shell pwd)
-up ?= 1
 down ?= 1
 
-# Ensure we're in a Unix-like environment
 ifeq (, $(shell which uname))
 $(error This Makefile requires a Unix-like environment)
 endif
 
-# Install dependencies
 install:
 	@echo "Checking for PostgreSQL Installation..."
 	@if command -v psql > /dev/null 2>&1; then \
@@ -45,14 +42,12 @@ install:
 	go mod download || exit 1
 	@echo "Dependencies installed."
 
-# Clean up directories and files
 clean:
 	@echo "Cleaning up directories and files..."
 	@if [ -d "video" ]; then rm -r video; fi
 	@if [ -d "segments" ]; then rm -r segments; fi
 	@echo "Clean up complete."
 
-# Initialize directories
 init:
 	@echo "Initializing directories..."
 	@mkdir -p video
@@ -75,38 +70,26 @@ start-postgres:
 		echo "PostgreSQL service failed to start.";\
 	fi
 
-# Start the Go application
 start:
 	make start-postgres || exit 1
 	@echo "Starting the Go application..."
 	go run main.go
 
-# Perform a clean start
 cleanstart:
 	@echo "Performing clean start..."
 	make clean || exit 1
 	make init || exit 1
 	make start || exit 1
 
+build:
+	go build main.go
+
 migration:
-	docker run \
-	--rm \
-	-v $(pwd)/database/migrations:/migrations migrate/migrate create \
-	-ext sql \
-	-dir /migrations \
-	-seq $(name)
+	migrate create -ext sql -dir $(pwd)/database/migrations -seq $(name)
 	sudo chmod 666 $(pwd)/database/migrations/*_$(name).up.sql $(pwd)/database/migrations/*_$(name).down.sql
 
 migrate-up:
-	docker run \
-	-v $(pwd)/database/migrations:/migrations \
-	--network video-streaming-server_default migrate/migrate \
-	-path=/migrations/ \
-	-database "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" up $(up)
+	migrate -path $(pwd)/database/migrations -database "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${SSL_MODE}" up
 
 migrate-down:
-	docker run \
-	-v $(pwd)/database/migrations:/migrations \
-	--network video-streaming-server_default migrate/migrate \
-	-path=/migrations/ \
-	-database "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=disable" down $(down)
+	migrate -path $(pwd)/database/migrations -database "postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${SSL_MODE}" down $(down)
