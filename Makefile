@@ -21,13 +21,14 @@ install-dev:
 	@if command -v go > /dev/null 2>&1; then \
 		echo "Go is already installed."; \
 	else \
-		echo "Installing Go version 1.22.2..."; \
-		wget https://golang.org/dl/go1.22.2.linux-amd64.tar.gz -O go1.22.2.tar.gz || exit 1; \
-		sudo tar -C /usr/local -xzf go1.22.2.tar.gz || exit 1; \
-		echo "Go version 1.22.2 installed."; \
-		rm go1.22.2.tar.gz; \
+		echo "Installing Go version 1.23.7..."; \
+		wget https://golang.org/dl/go1.23.7.linux-amd64.tar.gz -O go1.23.7.tar.gz || exit 1; \
+		sudo tar -C /usr/local -xzf go1.23.7.tar.gz || exit 1; \
+		echo "Go version 1.23.7 installed."; \
+		rm go1.23.7.tar.gz; \
 		echo "Updating PATH to include Go binary directory..."; \
 		echo "export PATH=\$$PATH:/usr/local/go/bin" >> ~/.bashrc; \
+		export PATH=$PATH:$(go env GOPATH)/bin \
 		. ~/.bashrc; \
 	fi
 	@echo "Checking for FFMpeg installation..."
@@ -37,6 +38,14 @@ install-dev:
 		echo "Installing FFMpeg..."; \
 		sudo apt-get update && sudo apt-get install -y ffmpeg || exit 1; \
 		echo "FFMpeg installed."; \
+	fi
+	@echo "Checking for golang-migrate installation..."
+	@if command -v migrate > /dev/null 2>&1; then \
+		echo "golang-migrate is already installed."; \
+	else \
+		echo "Installing golang-migrate..."; \
+		go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest || exit 1; \
+		echo "golang-migrate installed."; \
 	fi
 	@echo "Installing Go dependencies..."
 	go mod download || exit 1
@@ -108,6 +117,7 @@ start-postgres:
 
 start:
 	make start-postgres || exit 1
+	make migrate-up || exit 1
 	@echo "Starting the Go application..."
 	go run main.go
 
