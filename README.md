@@ -1,28 +1,32 @@
 # Dekho: A Journey into Audio/Video Streaming
 
-> **Announcement: 📢** Dekho is back! After being a dead for nearly two years, we're reviving this project to explore the fundamentals of audio and video streaming once again. You can track our progress on the revival of the project in this milestone [here](https://github.com/Chirag-And-Dheeraj/video-streaming-server/milestone/1).
+## Some Achievements ✨
+
+We launched [Dekho](https://peerlist.io/dheerajlalwani/project/dekho) on [Peerlist](https://peerlist.io) in the 3rd Week of January 2025 and we had a pretty good response.
+
+![Project of the week](/documentation/static/Winner-Medal-Weekly.svg) ![Project of the week](/documentation/static/Winner-Medal-Monthly.svg)
 
 ## Overview
 
-Dekho is a research and study project aimed at understanding and mastering the intricacies of audio and video streaming. Our primary focus was on implementing the [HLS (HTTP Live Streaming)](https://developer.apple.com/streaming) protocol to build an on-demand live streaming server.
-
-However, expect things to change in the upcoming versions while we shape this into something more refined.
+Dekho is a research and study project aimed at understanding and learning about audio and video streaming. Our primary focus was on implementing the [HLS (HTTP Live Streaming)](https://developer.apple.com/streaming) protocol to build an on-demand video streaming server.
 
 ## Setup Instructions
+
+### Without Docker
 
 - Install the `make` utility because we have created a **_[Makefile](Makefile)_** to ease the setup
 - Clone the repository
 - Create an **_[Appwrite storage bucket](https://appwrite.io/docs/products/storage)_**
   - Make sure that you make a note of `APPWRITE_KEY`, `APPWRITE_PROJECT_ID` and the `BUCKET_ID`.
 - Now we are moving to the dependency installation steps.
-- This project needs `go version go1.22.2`, `ffmpeg` utility and `psql (PostgreSQL) 16.3` database.
-- To install these, and the Go dependencies, run `make install`.
-  - The `make install` takes care of installing go, ffmpeg and psql dependencies.
+- This project needs `go version go1.23`, `ffmpeg` utility and `psql (PostgreSQL) 16.3` database.
+- To install these, and the Go dependencies, run `make install-dev`.
+  - The `make install-dev` takes care of installing PostgreSQL, Go, FFMpeg, golang-migrate and Go dependencies.
   - Run `make start-postgres` to start the postgres service.
   - Create a database user by running this command `sudo -u postgres createuser -s username_here -P`
   - `-P` will prompt for a password.
   - Enter the `psql` shell by running this command `sudo -u postgres psql` and create a database by running `CREATE DATABASE <database_name>;`.
-  - Create a `.env` file using **_[template.env](template.env)_** as a reference.
+  - Create a `.env` file using **_[.env.local](.env.local)_** as a reference.
 - Once the dependencies are installed successfully, run `make cleanstart`.
 - This command will create all the necessary folders and start the server on `http://127.0.0.1:8000`
 - If you just want to run the server, run: `make start`
@@ -31,7 +35,7 @@ However, expect things to change in the upcoming versions while we shape this in
 ## Technologies Used
 
 - **Server:** Go
-- **Database:** SQLite
+- **Database:** PostgreSQL
 - **Storage:** [Appwrite Storage](https://appwrite.io/docs/products/storage)
 - **Video Processing:** [FFMPEG](https://ffmpeg.org) for breaking down videos into .ts chunks
 - **Video Player:** [HLS.js](https://github.com/video-dev/hls.js)
