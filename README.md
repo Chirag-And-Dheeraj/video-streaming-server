@@ -12,12 +12,22 @@ Dekho is a research and study project aimed at understanding and learning about 
 
 ## Setup Instructions
 
-### Without Docker
+### Basic Steps
 
-- Install the `make` utility because we have created a **_[Makefile](Makefile)_** to ease the setup
 - Clone the repository
 - Create an **_[Appwrite storage bucket](https://appwrite.io/docs/products/storage)_**
   - Make sure that you make a note of `APPWRITE_KEY`, `APPWRITE_PROJECT_ID` and the `BUCKET_ID`.
+
+### With Docker
+
+- Install `docker-compose` on your machine.
+- cd into the root of the repository.
+  - Create a `.env` file using **_[.env.local](.env.docker)_** as a reference.
+- Just run `docker-compose up` to start the server.
+
+### Without Docker
+
+- Install the `make` utility because we have created a **_[Makefile](Makefile)_** to ease the setup
 - Now we are moving to the dependency installation steps.
 - This project needs `go version go1.23`, `ffmpeg` utility and `psql (PostgreSQL) 16.3` database.
 - To install these, and the Go dependencies, run `make install-dev`.
