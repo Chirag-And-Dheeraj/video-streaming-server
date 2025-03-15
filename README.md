@@ -22,7 +22,7 @@ Dekho is a research and study project aimed at understanding and learning about 
 
 - Install `docker-compose` on your machine.
 - cd into the root of the repository.
-  - Create a `.env` file using **_[.env.local](.env.docker)_** as a reference.
+  - Create a `.env` file using **_[.env.docker](.env.docker)_** as a reference.
 - Just run `docker-compose up` to start the server.
 
 ### Without Docker
