@@ -15,7 +15,8 @@ services:
     ports:
       - "${PORT}:${PORT}"
     depends_on:
-      - dekho-postgres
+      dekho-postgres:
+        condition: service_healthy
     volumes:
       - ./:/app
     command: ./scripts/start_dev.sh
@@ -33,6 +34,12 @@ services:
       - "${DB_PORT}:${DB_PORT}"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 
 volumes:
   pgdata: {}
