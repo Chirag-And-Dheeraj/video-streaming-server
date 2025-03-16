@@ -373,8 +373,37 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	log.Println(reqBody)
 
-	
-	
+	query, err := db.Prepare(`
+		UPDATE
+			videos
+		SET
+			title=$1,
+			description=$2
+		WHERE
+			video_id=$3;
+	`)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := query.Exec(reqBody.Title, reqBody.Description, videoId)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Streaming Video", http.StatusInternalServerError)
+		return
+	} else {
+		rows, _ := result.RowsAffected()
+		if  rows == 0 {
+			http.Error(w, "No record found with given ID", http.StatusNotFound)
+			return
+		}
+	}
+
+	log.Println("Database record updated.")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 // @desc Delete the video
