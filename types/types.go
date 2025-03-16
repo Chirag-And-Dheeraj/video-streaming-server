@@ -1,6 +1,7 @@
 package types
 
 import (
+	"database/sql"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -29,9 +30,10 @@ type FFProbeOutput struct {
 }
 
 type Video struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+	ID          string         `json:"id"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	Thumbnail   sql.NullString `json:"thumbnail"`
 }
 
 type Session struct {
@@ -47,6 +49,18 @@ type User struct {
 	HashedPassword []byte    `json:"-"`
 	CreatedAt      time.Time `json:"created_at"`
 	UpdatedAt      time.Time `json:"updated_at"`
+}
+
+type ThumbnailUploadResponse struct {
+	ID       string `json:"$id"`
+	BucketID string `json:"bucketId"`
+}
+
+type ListVideosResponseItem struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Thumbnail   string `json:"thumbnail"`
 }
 
 func NewUser(username, email, password string) (*User, error) {

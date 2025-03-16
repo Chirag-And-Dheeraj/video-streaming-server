@@ -54,6 +54,8 @@ func initializeTables(db *sql.DB) error {
 			delete_flag SMALLINT CHECK (delete_flag IN (0, 1)),
 			FOREIGN KEY (user_id) REFERENCES users(id)
 		);`,
+		`ALTER TABLE videos
+			ADD COLUMN IF NOT EXISTS thumbnail TEXT;`,
 	}
 
 	for _, query := range tableQueries {
@@ -85,10 +87,6 @@ func Connect(config *DBConfig) (*sql.DB, error) {
 
 	log.Println("Database connection established.")
 
-	err = initializeTables(db)
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize tables: %w", err)
-	}
 
 	log.Println("Database initialized.")
 	return db, nil
