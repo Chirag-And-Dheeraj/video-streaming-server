@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"os"
 	"regexp"
 	"time"
 	"video-streaming-server/config"
@@ -160,7 +159,7 @@ func configHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileSizeLimit := os.Getenv("FILE_SIZE_LIMIT")
+	fileSizeLimit := config.AppConfig.FileSizeLimit
 	if fileSizeLimit == "" {
 		http.Error(w, "File size limit not configured", http.StatusInternalServerError)
 		return
@@ -230,9 +229,12 @@ func initServer() {
 }
 
 func main() {
+
+	_, err := config.LoadConfig(".env")
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
 	initServer()
-	addr := os.Getenv("ADDR")
-	port := os.Getenv("PORT")
 	log.Println("Server is listening on http://127.0.0.1:8000")
-	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", addr, port), nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", config.AppConfig.Addr, config.AppConfig.Port), nil))
 }
