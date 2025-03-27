@@ -60,7 +60,7 @@ func extractThumbnail(videoPath string, fileName string) (string, error) {
 
 	log.Println("Video path: " + videoPath)
 
-	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-frames:v", "1", os.Getenv("ROOT_PATH")+"/thumbnails/"+fileName+"/"+fileName+"_thumbnail.png")
+	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-frames:v", "1", config.AppConfig.RootPath+"/thumbnails/"+fileName+"/"+fileName+"_thumbnail.png")
 
 	output, err := cmd.CombinedOutput()
 
@@ -69,7 +69,7 @@ func extractThumbnail(videoPath string, fileName string) (string, error) {
 		log.Println(err)
 		return "", err
 	} else {
-		return os.Getenv("ROOT_PATH") + "/thumbnails/" + fileName + "/" + fileName + "_thumbnail.png", nil
+		return config.AppConfig.RootPath + "/thumbnails/" + fileName + "/" + fileName + "_thumbnail.png", nil
 	}
 }
 
@@ -94,7 +94,7 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) {
 		log.Println(err)
 	}
 
-	uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files"
+	uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files"
 
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
@@ -131,9 +131,9 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) {
 	}
 
 	request.Header.Set("Content-Type", writer.FormDataContentType())
-	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+	request.Header.Set("X-Appwrite-Response-Format", config.AppConfig.AppwriteResponseFormat)
+	request.Header.Set("X-Appwrite-Project", config.AppConfig.AppwriteProjectID)
+	request.Header.Set("X-Appwrite-Key", config.AppConfig.AppwriteKey)
 
 	client := &http.Client{}
 	response, err := client.Do(request)
@@ -177,7 +177,7 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) {
 			log.Println(err)
 		}
 
-		thumbnailURL := fmt.Sprintf("https://cloud.appwrite.io/v1/storage/buckets/%s/files/%s/view?project=%s", uploadResponse.BucketID, uploadResponse.ID, os.Getenv("APPWRITE_PROJECT_ID"))
+		thumbnailURL := fmt.Sprintf("https://cloud.appwrite.io/v1/storage/buckets/%s/files/%s/view?project=%s", uploadResponse.BucketID, uploadResponse.ID, config.AppConfig.AppwriteProjectID)
 
 		log.Println("Thumbnail view URL: " + thumbnailURL)
 
@@ -239,7 +239,7 @@ func breakFile(videoPath string, fileName string) bool {
 		audioCodecAction = "aac"
 	}
 
-	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-c:v", videoCodecAction, "-preset", "veryfast", "-c:a", audioCodecAction, "-map", "0", "-f", "segment", "-segment_time", "4", "-segment_format", "mpegts", "-segment_list", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", os.Getenv("ROOT_PATH")+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
+	cmd := exec.Command("ffmpeg", "-y", "-i", videoPath, "-c:v", videoCodecAction, "-preset", "veryfast", "-c:a", audioCodecAction, "-map", "0", "-f", "segment", "-segment_time", "4", "-segment_format", "mpegts", "-segment_list", config.AppConfig.RootPath+"/segments/"+fileName+"/"+fileName+".m3u8", "-segment_list_type", "m3u8", config.AppConfig.RootPath+"/segments/"+fileName+"/"+fileName+"_"+"segment_no_%d.ts")
 
 	output, err := cmd.CombinedOutput()
 
@@ -288,7 +288,7 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 			log.Println(err)
 		}
 
-		uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files"
+		uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files"
 
 		var requestBody bytes.Buffer
 		writer := multipart.NewWriter(&requestBody)
@@ -332,9 +332,9 @@ func uploadToAppwrite(folderName string, db *sql.DB) {
 		}
 
 		request.Header.Set("Content-Type", writer.FormDataContentType())
-		request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-		request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-		request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+		request.Header.Set("X-Appwrite-Response-Format", config.AppConfig.AppwriteResponseFormat)
+		request.Header.Set("X-Appwrite-Project", config.AppConfig.AppwriteProjectID)
+		request.Header.Set("X-Appwrite-Key", config.AppConfig.AppwriteKey)
 
 		client := &http.Client{}
 		response, err := client.Do(request)
@@ -433,7 +433,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 func GetManifestFile(w http.ResponseWriter, videoId string) ([]byte, error) {
 	log.Println("Video ID: " + videoId)
 
-	getManifestFile := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/" + videoId + "/view"
+	getManifestFile := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files/" + videoId + "/view"
 
 	request, err := http.NewRequest("GET", getManifestFile, nil)
 
@@ -442,9 +442,9 @@ func GetManifestFile(w http.ResponseWriter, videoId string) ([]byte, error) {
 	}
 
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+	request.Header.Set("X-Appwrite-Response-Format", config.AppConfig.AppwriteResponseFormat)
+	request.Header.Set("X-Appwrite-Project", config.AppConfig.AppwriteProjectID)
+	request.Header.Set("X-Appwrite-Key", config.AppConfig.AppwriteKey)
 
 	client := &http.Client{}
 
@@ -490,7 +490,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 	file := string(fileBytes)
 	lines := strings.Split(file, "\n")
 
-	deleteUrl := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/"
+	deleteUrl := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files/"
 
 	thumbnailFile := videoId + "_thumbnail.png"
 
@@ -507,9 +507,9 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 	}
 
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+	request.Header.Set("X-Appwrite-Response-Format", config.AppConfig.AppwriteResponseFormat)
+	request.Header.Set("X-Appwrite-Project", config.AppConfig.AppwriteProjectID)
+	request.Header.Set("X-Appwrite-Key", config.AppConfig.AppwriteKey)
 
 	client := &http.Client{}
 
@@ -535,9 +535,9 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 			}
 
 			request.Header.Set("Content-Type", "application/json")
-			request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-			request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-			request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+			request.Header.Set("X-Appwrite-Response-Format", config.AppConfig.AppwriteResponseFormat)
+			request.Header.Set("X-Appwrite-Project", config.AppConfig.AppwriteProjectID)
+			request.Header.Set("X-Appwrite-Key", config.AppConfig.AppwriteKey)
 
 			client := &http.Client{}
 
@@ -562,9 +562,9 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 	}
 
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+	request.Header.Set("X-Appwrite-Response-Format", config.AppConfig.AppwriteResponseFormat)
+	request.Header.Set("X-Appwrite-Project", config.AppConfig.AppwriteProjectID)
+	request.Header.Set("X-Appwrite-Key", config.AppConfig.AppwriteKey)
 
 	client = &http.Client{}
 
@@ -604,7 +604,7 @@ func GenerateJWT(userID string, username string) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	return token.SignedString([]byte(config.SecretKey))
+	return token.SignedString([]byte(config.AppConfig.JWTSecretKey))
 }
 
 func DecodeJWT(tokenString string) (jwt.MapClaims, error) {
@@ -632,7 +632,7 @@ func VerifyToken(tokenString string) (*jwt.Token, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(config.SecretKey), nil
+		return []byte(config.AppConfig.JWTSecretKey), nil
 	})
 }
 

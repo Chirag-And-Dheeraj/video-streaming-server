@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
+	"video-streaming-server/config"
 
 	_ "github.com/lib/pq"
 )
@@ -24,12 +24,12 @@ type DBConfig struct {
 // NewDBConfig creates a new DBConfig from environment variables
 func newDBConfig() (*DBConfig, error) {
 	return &DBConfig{
-		Host:     os.Getenv("DB_HOST"),
-		Port:     os.Getenv("DB_PORT"),
-		User:     os.Getenv("DB_USER"),
-		Password: os.Getenv("DB_PASSWORD"),
-		Name:     os.Getenv("DB_NAME"),
-		SSLMode:  os.Getenv("SSL_MODE"),
+		Host:     config.AppConfig.DBHost,
+		Port:     config.AppConfig.DBPort,
+		User:     config.AppConfig.DBUser,
+		Password: config.AppConfig.DBPassword,
+		Name:     config.AppConfig.DBName,
+		SSLMode:  config.AppConfig.SSLMode,
 	}, nil
 }
 
@@ -86,7 +86,6 @@ func Connect(config *DBConfig) (*sql.DB, error) {
 	}
 
 	log.Println("Database connection established.")
-
 
 	log.Println("Database initialized.")
 	return db, nil

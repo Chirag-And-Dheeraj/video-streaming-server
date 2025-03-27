@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"video-streaming-server/config"
 	. "video-streaming-server/types"
 	"video-streaming-server/utils"
 )
@@ -29,7 +30,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		http.Error(w, "User not logged in.", http.StatusUnauthorized)
 		return
 	}
-	sizeLimit, _ := strconv.Atoi(os.Getenv("FILE_SIZE_LIMIT"))
+	sizeLimit, _ := strconv.Atoi(config.AppConfig.FileSizeLimit)
 
 	if fileSize > sizeLimit {
 		w.WriteHeader(http.StatusBadRequest)
@@ -309,7 +310,7 @@ func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	log.Println("Video chunk requested: " + fileId)
 
-	getSegmentFile := "https://cloud.appwrite.io/v1/storage/buckets/" + os.Getenv("BUCKET_ID") + "/files/" + fileId + "/view"
+	getSegmentFile := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files/" + fileId + "/view"
 
 	request, err := http.NewRequest("GET", getSegmentFile, nil)
 
@@ -320,9 +321,9 @@ func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	request.Header.Set("Content-Type", "application/json")
-	request.Header.Set("X-Appwrite-Response-Format", os.Getenv("APPWRITE_RESPONSE_FORMAT"))
-	request.Header.Set("X-Appwrite-Project", os.Getenv("APPWRITE_PROJECT_ID"))
-	request.Header.Set("X-Appwrite-Key", os.Getenv("APPWRITE_KEY"))
+	request.Header.Set("X-Appwrite-Response-Format", config.AppConfig.AppwriteResponseFormat)
+	request.Header.Set("X-Appwrite-Project", config.AppConfig.AppwriteProjectID)
+	request.Header.Set("X-Appwrite-Key", config.AppConfig.AppwriteKey)
 
 	client := &http.Client{}
 
