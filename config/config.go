@@ -74,9 +74,9 @@ func LoadEnvFile(filename string) error {
 	return nil
 }
 
-func LoadConfig(envFile string) (*Config, error) {
+func LoadConfig(envFile string) error {
 	if err := LoadEnvFile(envFile); err != nil {
-		return nil, err
+		return err
 	}
 
 	config := &Config{
@@ -107,5 +107,5 @@ func LoadConfig(envFile string) (*Config, error) {
 	AppConfig = config
 
 	log.Println("Configuration loaded successfully.")
-	return config, nil
+	return nil
 }

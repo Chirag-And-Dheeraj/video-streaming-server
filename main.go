@@ -229,9 +229,7 @@ func initServer() {
 }
 
 func main() {
-
-	_, err := config.LoadConfig(".env")
-	if err != nil {
+	if err := config.LoadConfig(".env"); err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 	initServer()
