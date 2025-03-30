@@ -50,6 +50,10 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Print("Segment Request:")
 			log.Println(regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/[a-zA-B0-9_-]+.ts/?$", path))
 			controllers.TSFileHandler(w, r, db)
+		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/status/?$", path); err == nil && matched {
+			log.Print("Status Server Sent Event connection")
+			log.Println(regexp.MatchString("^/video/[a-zA-B0-9-]+/status/?$", path))
+			controllers.GetVideoStatusEventHandler(w, r, db)
 		} else {
 			response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
 			http.Error(w, response, http.StatusNotFound)
