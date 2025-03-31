@@ -2,7 +2,7 @@ class VideoItem extends HTMLElement {
   constructor() {
     super();
     this.shadow = this.attachShadow({
-      mode: "open"
+      mode: "open",
     });
     const style = document.createElement("style");
     style.textContent = `
@@ -57,6 +57,10 @@ class VideoItem extends HTMLElement {
 
           .delete-modal, .delete {
               background-color: #ff4444;
+          }
+
+          .update-modal, .update {
+              background-color: #a0a0ff;;
           }
 
           .modal {
@@ -161,13 +165,15 @@ class VideoItem extends HTMLElement {
               <p class="description"></p>
           </div>
           <div class="actions">
+              <button class="action-button update-modal">Edit</button>
               <button class="action-button delete-modal">Delete</button>
           </div>
+
       </div>
   `;
 
-    const modalTemplate = document.createElement("template");
-    modalTemplate.innerHTML = `
+    const deleteModalTemplate = document.createElement("template");
+    deleteModalTemplate.innerHTML = `
       <div class="modal" id="deleteConfirmModal">
           <div class="modal-content">
               <p>Are you sure you want to delete the following file:</p>
@@ -180,18 +186,66 @@ class VideoItem extends HTMLElement {
       </div>
   `;
 
+    const updateModalTemplate = document.createElement("template");
+    updateModalTemplate.innerHTML = `
+      <div class="modal" id="updateModal">
+          <div class="modal-content">
+              <section id="form-section">
+                <form id="file-form">
+                  <label for="title">Title</label>
+                  <br />
+                  <input
+                    id="title"
+                    type="text"
+                    name="title"
+                    placeholder="The Fast and The Furious"
+                    required
+                  />
+
+                  <p id="titleError" class="special-red" style="display: none"></p>
+
+                  <br />
+
+                  <label class="block" for="description">Description</label>
+                  <br />
+                  <textarea
+                    id="description"
+                    type="text"
+                    name="description"
+                    placeholder="A movie about car racing."
+                    required
+                  ></textarea>
+
+                  <p
+                    id="descriptionError"
+                    class="special-red"
+                    style="display: none"
+                  ></p>
+
+                  <br />
+
+                  <button class="action-button cancel">Cancel</button>
+                  <button type="submit" class="action-button update">Save</button>
+                </form>
+              </section>
+          </div>
+      </div>
+  `;
+
     this.shadow.appendChild(style);
 
     this.shadow.appendChild(template.content.cloneNode(true));
-    this.shadow.appendChild(modalTemplate.content.cloneNode(true));
-    this.initializeModal();
+    this.shadow.appendChild(deleteModalTemplate.content.cloneNode(true));
+    this.shadow.appendChild(updateModalTemplate.content.cloneNode(true));
+    this.initializeDeleteModal();
+    this.initializeUpdateModal();
     this.initialize();
   }
 
   initialize() {
     this.shadowRoot.addEventListener("click", (e) => {
       const target = e.target;
-      if (target.classList.contains("delete-modal")) {
+      if (target.classList.contains("delete-modal") || target.classList.contains("update-modal")) {
         e.stopPropagation();
         return;
       }
@@ -202,7 +256,29 @@ class VideoItem extends HTMLElement {
     });
   }
 
-  initializeModal() {
+  initializeUpdateModal() {
+    const modal = this.shadow.querySelector("#updateModal");
+    const cancelButton = modal.querySelector(".cancel");
+    const fileForm = modal.querySelector("#file-form");
+
+    this.shadowRoot.addEventListener("click", (e) => {
+      if (e.target.classList.contains("update-modal")) {
+        e.stopPropagation();
+        modal.style.display = "block";
+      }
+    });
+
+    cancelButton.addEventListener("click", () => {
+      modal.style.display = "none";
+    });
+
+    fileForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      this.handleUpdate();
+    });
+  }
+
+  initializeDeleteModal() {
     const modal = this.shadow.querySelector("#deleteConfirmModal");
     const cancelButton = modal.querySelector(".cancel");
     const deleteButton = modal.querySelector(".delete");
@@ -260,6 +336,60 @@ class VideoItem extends HTMLElement {
       });
   }
 
+  handleUpdate() {
+    const videoId = this.getAttribute("video-id");
+    const updateButton = this.shadowRoot.querySelector(".update");
+    const titleElement = this.shadowRoot.getElementById("title");
+    const descriptionElement = this.shadowRoot.getElementById("description");
+    const titleError = this.shadowRoot.getElementById("titleError");
+    const descriptionError = this.shadowRoot.getElementById("descriptionError");
+
+    const title = titleElement.value;
+    const description = descriptionElement.value;
+    const regex = /^[a-zA-Z0-9\s\-_',.!&():]+$/;
+
+    if (!regex.test(title)) {
+      titleError.textContent = "Invalid Title";
+      titleError.style.display = "block";
+      return;
+    }
+
+    if (!regex.test(description)) {
+      descriptionError.textContent = "Invalid Description";
+      descriptionError.style.display = "block";
+      return;
+    }
+
+    updateButton.textContent = "Saving...";
+
+    console.log(titleElement.value, descriptionElement.value);
+    const changes = {
+      title,
+      description,
+    };
+
+    fetch(`${window.ENV.API_URL}/video/${videoId}`, {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(changes),
+    })
+      .then((response) => {
+        if (response.ok) {
+          this.remove();
+          window.location.reload(true);
+        } else {
+          updateButton.textContent = "Error";
+        }
+      })
+      .catch((error) => {
+        updateButton.textContent = "Error";
+        console.error("Error updating video details:", error);
+      });
+  }
+
   static get observedAttributes() {
     return ["name", "description", "thumbnail", "video-id"];
   }
@@ -278,10 +408,7 @@ class VideoItem extends HTMLElement {
   }
 
   disconnectedCallback() {
-    this.shadowRoot.removeEventListener(
-      "click",
-      this.shadowRoot.lastEventCallback
-    );
+    this.shadowRoot.removeEventListener("click", this.shadowRoot.lastEventCallback);
   }
 }
 

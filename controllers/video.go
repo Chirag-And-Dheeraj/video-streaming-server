@@ -357,7 +357,6 @@ func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 // @route UPDATE
 func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoId := r.URL.Path[len("/video/"):]
-	log.Println(videoId)
 
 	if videoId == "" {
 		http.Error(w, "Missing 'id' query parameter", http.StatusBadRequest)
@@ -370,8 +369,6 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
 		return
 	}
-
-	log.Println(reqBody)
 
 	query, err := db.Prepare(`
 		UPDATE
