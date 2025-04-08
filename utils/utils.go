@@ -440,6 +440,10 @@ func closeVideoFile(tmpFile *os.File) error {
 	return nil
 }
 
+var EventsChannel chan string
+
+// var EventsChannel = make(chan string)
+
 func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.File, db *sql.DB) {
 	log.Println("Received all chunks for: " + serverFileName)
 
@@ -476,7 +480,8 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 			}
 		} else {
 			log.Printf("Successfully uploaded chunks of %s to Appwrite Storage", fileName)
-		}	
+			EventsChannel <- "HAARAMI"
+		}
 	} else {
 		log.Printf("Error breaking %s into .ts files : %v", fileName, err)
 		if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {

@@ -50,10 +50,6 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Print("Segment Request:")
 			log.Println(regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/[a-zA-B0-9_-]+.ts/?$", path))
 			controllers.TSFileHandler(w, r, db)
-		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/status/?$", path); err == nil && matched {
-			log.Print("Status Server Sent Event connection")
-			log.Println(regexp.MatchString("^/video/[a-zA-B0-9-]+/status/?$", path))
-			controllers.GetVideoStatusEventHandler(w, r, db)
 		} else {
 			response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
 			http.Error(w, response, http.StatusNotFound)
@@ -208,6 +204,46 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	log.Println("SSE API IS CONNECTED OKAY.")
+
+	clientGone := r.Context().Done()
+	rc := http.NewResponseController(w)
+
+	if n, err := fmt.Fprintf(w, "event:cpu\ndata:User:bhai\n\n"); err != nil {
+		log.Printf("Unable to write: %s", err.Error())
+	} else {
+		log.Printf("Wrote %d bytes", n)
+	}
+
+	rc.Flush()
+
+	for {
+		select {
+		case <-clientGone:
+			log.Println("Client is ded, I am sed 😞")
+			return
+		case msg := <-utils.EventsChannel:
+			log.Println("received message bhai " + msg)
+			if n, err := fmt.Fprintf(w, "event:cpu\ndata:User:%s\n\n", msg); err != nil {
+				log.Printf("Unable to write: %s", err.Error())
+			} else {
+				log.Printf("Wrote %d bytes", n)
+			}
+			rc.Flush()
+		}
+	}
+}
+
 func setUpRoutes(db *sql.DB) {
 	log.Println("Setting up routes...")
 	http.HandleFunc("/", homePageHandler)
@@ -225,6 +261,9 @@ func setUpRoutes(db *sql.DB) {
 	http.HandleFunc("/video/", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
 	}))
+	http.HandleFunc("/server-events/", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
+		serverSentEventsHandler(w, r)
+	}))
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Routes set.")
 }
@@ -235,6 +274,8 @@ func initServer() {
 	database.DB = database.GetDBConn()
 	setUpRoutes(database.DB)
 	utils.ResumeUploadIfAny(database.DB)
+	utils.EventsChannel = make(chan string)
+	fmt.Println(utils.EventsChannel)
 }
 
 func main() {
