@@ -82,7 +82,7 @@ class VideoItem extends HTMLElement {
               background-color: #262626;
               padding: 2rem;
               border-radius: 8px;
-              text-align: center;
+              text-align: left;
               color: white;
           }
 
@@ -150,6 +150,18 @@ class VideoItem extends HTMLElement {
               opacity: 1;
               transform: translate(-50%, -50%) scale(1);
           }
+
+          #title {
+            width: 400px;
+            padding: 10px;
+            border-radius: 5px;
+          }
+          #description {
+            width: 400px;
+            height: 70px;
+            padding: 10px;
+            border-radius: 5px;
+          }
       `;
 
     const template = document.createElement("template");
@@ -198,12 +210,13 @@ class VideoItem extends HTMLElement {
                     id="title"
                     type="text"
                     name="title"
-                    placeholder="The Fast and The Furious"
+                    value="${this.getAttribute("name")}"
                     required
                   />
 
                   <p id="titleError" class="special-red" style="display: none"></p>
 
+                  <br />
                   <br />
 
                   <label class="block" for="description">Description</label>
@@ -212,9 +225,8 @@ class VideoItem extends HTMLElement {
                     id="description"
                     type="text"
                     name="description"
-                    placeholder="A movie about car racing."
                     required
-                  ></textarea>
+                  >${this.getAttribute("description")}</textarea>
 
                   <p
                     id="descriptionError"
@@ -223,9 +235,10 @@ class VideoItem extends HTMLElement {
                   ></p>
 
                   <br />
-
-                  <button class="action-button cancel">Cancel</button>
-                  <button type="submit" class="action-button update">Save</button>
+                  <div class="modal-actions">
+                    <button type="button" class="action-button cancel">Cancel</button>
+                    <button type="submit" class="action-button update">Save</button>
+                  </div>
                 </form>
               </section>
           </div>
@@ -258,7 +271,7 @@ class VideoItem extends HTMLElement {
 
   initializeUpdateModal() {
     const modal = this.shadow.querySelector("#updateModal");
-    const cancelButton = modal.querySelector(".cancel");
+    const cancelButton = modal.querySelector("#updateModal .cancel");
     const fileForm = modal.querySelector("#file-form");
 
     this.shadowRoot.addEventListener("click", (e) => {
@@ -275,6 +288,12 @@ class VideoItem extends HTMLElement {
     fileForm.addEventListener("submit", (e) => {
       e.preventDefault();
       this.handleUpdate();
+    });
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) {
+        modal.style.display = "none";
+      }
     });
   }
 
@@ -362,7 +381,6 @@ class VideoItem extends HTMLElement {
 
     updateButton.textContent = "Saving...";
 
-    console.log(titleElement.value, descriptionElement.value);
     const changes = {
       title,
       description,
