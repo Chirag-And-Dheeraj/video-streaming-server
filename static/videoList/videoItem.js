@@ -155,12 +155,24 @@ class VideoItem extends HTMLElement {
             width: 400px;
             padding: 10px;
             border-radius: 5px;
+            border: none;
+            outline: none;
           }
           #description {
             width: 400px;
             height: 70px;
             padding: 10px;
             border-radius: 5px;
+            border: none;
+            outline: none;
+          }
+
+          .special-red {
+            color: #ff8e8e;
+          }
+
+          .special-blue {
+            color: #a0a0ff;
           }
       `;
 
@@ -188,7 +200,7 @@ class VideoItem extends HTMLElement {
     deleteModalTemplate.innerHTML = `
       <div class="modal" id="deleteConfirmModal">
           <div class="modal-content">
-              <p>Are you sure you want to delete the following file:</p>
+              <p>Are you sure you want to delete the following video:</p>
               <h3 class="name"></h3>
               <div class="modal-actions">
                   <button class="action-button cancel">Cancel</button>
@@ -214,7 +226,7 @@ class VideoItem extends HTMLElement {
                     required
                   />
 
-                  <p id="titleError" class="special-red" style="display: none"></p>
+                  <span id="titleError" class="special-red" style="display: none"></span>
 
                   <br />
                   <br />
@@ -228,11 +240,11 @@ class VideoItem extends HTMLElement {
                     required
                   >${this.getAttribute("description")}</textarea>
 
-                  <p
+                  <span
                     id="descriptionError"
                     class="special-red"
                     style="display: none"
-                  ></p>
+                  ></span>
 
                   <br />
                   <div class="modal-actions">
