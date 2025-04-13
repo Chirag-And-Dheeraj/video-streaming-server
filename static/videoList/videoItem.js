@@ -46,7 +46,7 @@ class VideoItem extends HTMLElement {
               width: 100%;
               aspect-ratio: 16 / 9;
               height: auto;
-              width: 250px;
+              width: auto;
               flex-shrink: 0;
               border-radius: 8px 8px 0 0;
           }

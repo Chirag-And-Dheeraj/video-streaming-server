@@ -13,13 +13,13 @@ class VideoList extends HTMLElement {
         .controls {
             display: flex;
             justify-content: center;
-            margin-bottom: 1rem;
+            margin: 0.5rem 0 1.5rem 0;
             gap: 0.5rem;
         }
         .view-toggle-button {
             background-color: #262626;
             color: white;
-            border: 1px solid #444;
+            border: none;
             padding: 0.5rem 0.75rem;
             border-radius: 4px;
             cursor: pointer;
@@ -41,14 +41,14 @@ class VideoList extends HTMLElement {
 
         .video-items-container.list-view {
             display: grid;
-            grid-template-columns: 450px;
+            grid-template-columns: 50vw;
             gap: 1rem;
         }
 
         .video-items-container.grid-view {
             display: grid;
             gap: 1.5rem;
-            grid-template-columns: repeat(5, 250px);
+            grid-template-columns: repeat(5, 15vw);
         }
 
         .loading, .error {
