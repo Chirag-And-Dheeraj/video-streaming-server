@@ -59,6 +59,11 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			log.Println("DELETE: " + path)
 			controllers.DeleteHandler(w, r, db)
 		}
+	} else if method == "PATCH" {
+		if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
+			log.Println("Update Video Details")
+			controllers.UpdateHandler(w, r, db)
+		}
 	}
 }
 

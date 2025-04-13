@@ -353,6 +353,63 @@ func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	w.Write(bodyBytes)
 }
 
+// @desc Update Video Details
+// @route UPDATE
+func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	videoId := r.URL.Path[len("/video/"):]
+	user, err := utils.GetUserFromRequest(r)
+	if err != nil {
+		http.Error(w, "Error validating the request", http.StatusInternalServerError)
+		return
+	}
+
+
+	if videoId == "" {
+		http.Error(w, "Missing 'id' query parameter", http.StatusBadRequest)
+		return
+	}
+
+	var reqBody UpdateRequest
+	err = json.NewDecoder(r.Body).Decode(&reqBody)
+	if err != nil {
+		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+		return
+	}
+
+	query, err := db.Prepare(`
+		UPDATE
+			videos
+		SET
+			title=$1,
+			description=$2
+		WHERE
+			video_id=$3
+			AND user_id=$4;
+	`)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	result, err := query.Exec(reqBody.Title, reqBody.Description, videoId, user.ID)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error Streaming Video", http.StatusInternalServerError)
+		return
+	} else {
+		rows, _ := result.RowsAffected()
+		if  rows == 0 {
+			http.Error(w, "No record found with given ID", http.StatusNotFound)
+			return
+		}
+	}
+
+	log.Println("Database record updated.")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
 // @desc Delete the video
 // @route DELETE /video/[id]
 func DeleteHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
