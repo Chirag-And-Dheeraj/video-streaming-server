@@ -90,7 +90,7 @@ class VideoItem extends HTMLElement {
           }
            :host(.grid-mode-item) .action-button {
                padding: 0.4rem 0.6rem;
-               font-size: 0.9em;
+               font-size: 0.6em;
            }
 
           .video-item {
@@ -449,10 +449,6 @@ class VideoItem extends HTMLElement {
       const element = this.shadow.querySelector('.content .description');
        if (element) element.textContent = newValue || '';
     }
-  }
-
-  disconnectedCallback() {
-
   }
 }
 
