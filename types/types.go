@@ -25,10 +25,11 @@ type FFProbeOutput struct {
 }
 
 type Video struct {
-	ID          string         `json:"id"`
-	Title       string         `json:"title"`
-	Description string         `json:"description"`
-	Thumbnail   sql.NullString `json:"thumbnail"`
+	ID           string         `json:"id"`
+	Title        string         `json:"title"`
+	Description  string         `json:"description"`
+	Thumbnail    sql.NullString `json:"thumbnail"`
+	UploadStatus int            `json:"upload_status"`
 }
 
 type Session struct {

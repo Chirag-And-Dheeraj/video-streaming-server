@@ -385,3 +385,76 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	go utils.DeleteVideo(w, r, db, videoId)
 }
+
+func GetVideoStatusEventHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	clientGone := r.Context().Done()
+	rc := http.NewResponseController(w)
+
+	videoId := strings.Split(r.URL.Path[1:], "/")[1]
+	log.Println("Status of " + videoId + " requested.")
+	user, err := utils.GetUserFromRequest(r)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "User not logged in.", http.StatusUnauthorized)
+		return
+	}
+
+	detailsQuery, err := db.Prepare(`
+		SELECT
+			upload_status
+		FROM
+			videos
+		WHERE
+			video_id=$1
+		AND
+			user_id=$2;
+	`)
+
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Error retrieving record", http.StatusInternalServerError)
+	}
+
+	defer detailsQuery.Close()
+
+	statusT := time.NewTicker(5 * time.Second)
+	defer statusT.Stop()
+
+	var upload_status int
+
+	for {
+		select {
+		case <-clientGone:
+			log.Println("Client is ded, I am sed 😞")
+		case <-statusT.C:
+			log.Println("checking status")
+			err = detailsQuery.QueryRow(videoId, user.ID).Scan(&upload_status)
+
+			if err != nil {
+				if err == sql.ErrNoRows {
+					log.Println(err)
+					http.Error(w, "Video record not found", http.StatusNotFound)
+					return
+				}
+				log.Println(err)
+				http.Error(w, "Error retrieving record", http.StatusInternalServerError)
+				return
+			}
+			log.Printf("Ye mila hai bhai UPLOAD STATUS: %d", upload_status)
+
+			// w.Write([]byte(fmt.Sprintf("event:status_%s\nupload_status:%d", videoId, upload_status)))
+
+			if _, err := fmt.Fprintf(w, "event:status_%s\ndata:upload_status:%d\n\n", videoId, upload_status); err != nil {
+				log.Printf("Unable to write: %s", err.Error())
+				return
+			}
+
+			rc.Flush()
+		}
+	}
+
+}

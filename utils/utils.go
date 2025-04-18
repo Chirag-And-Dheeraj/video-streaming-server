@@ -404,6 +404,10 @@ func closeVideoFile(tmpFile *os.File) {
 	}
 }
 
+var EventsChannel chan string
+
+// var EventsChannel = make(chan string)
+
 func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.File, db *sql.DB) {
 	log.Println("Received all chunks for: " + serverFileName)
 
@@ -425,6 +429,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 		closeVideoFile(tmpFile)
 		uploadToAppwrite(fileName, db)
 		log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
+		EventsChannel <- "HAARAMI"
 	} else {
 		log.Println("Error breaking " + fileName + " into .ts files.")
 	}
