@@ -411,7 +411,9 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 
 	if err != nil {
 		log.Println("Error extractiong thumbnail for video " + fileName)
-		updateUploadStatus(db, fileName)
+		if err := updateUploadStatus(db, fileName); err != nil {
+			log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
+		}
 	} else {
 		log.Println("Extracted thumbnail " + extractedThumbnail)
 		uploadThumbnailToAppwrite(fileName, db)
@@ -428,8 +430,9 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 		log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
 	} else {
 		log.Println("Error breaking " + fileName + " into .ts files.")
-		updateUploadStatus(db, fileName)
-
+		if err := updateUploadStatus(db, fileName); err != nil {
+			log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
+		}
 	}
 }
 
@@ -692,7 +695,7 @@ func SendError(w http.ResponseWriter, statusCode int, message string) {
 }
 
 func updateUploadStatus(db *sql.DB, videoID string) error {
-	log.Println("Updating upload status to -1 for failed upload...")
+	log.Printf("Updating upload status to -1 for video_id %s", videoID)
 
 	const query = `
 		UPDATE videos
