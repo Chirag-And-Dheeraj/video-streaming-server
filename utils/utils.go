@@ -411,6 +411,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 
 	if err != nil {
 		log.Println("Error extractiong thumbnail for video " + fileName)
+		updateUploadStatus(db, fileName)
 	} else {
 		log.Println("Extracted thumbnail " + extractedThumbnail)
 		uploadThumbnailToAppwrite(fileName, db)
@@ -427,6 +428,8 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 		log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
 	} else {
 		log.Println("Error breaking " + fileName + " into .ts files.")
+		updateUploadStatus(db, fileName)
+
 	}
 }
 
@@ -686,4 +689,33 @@ func SendError(w http.ResponseWriter, statusCode int, message string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
+func updateUploadStatus(db *sql.DB, videoID string) error {
+	log.Println("Updating upload status to -1 for failed upload...")
+
+	const query = `
+		UPDATE videos
+		SET upload_status = $1
+		WHERE video_id = $2;
+	`
+	result, err := db.Exec(query, -1, videoID)
+	if err != nil {
+		log.Printf("Failed to update upload status for video %s: %v\n", videoID, err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error checking affected rows for video %s: %v\n", videoID, err)
+		return err
+	}
+
+	if rowsAffected == 0 {
+		log.Printf("No video found with video_id %s to update.\n", videoID)
+		return fmt.Errorf("no record found for video_id: %s", videoID)
+	}
+
+	log.Printf("Successfully updated upload status for video_id %s to -1.\n", videoID)
+	return nil
 }
