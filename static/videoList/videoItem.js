@@ -160,6 +160,27 @@ class VideoItem extends HTMLElement {
               border-color: #ac2925;
           }
 
+          .delete-modal, .delete {
+              background-color: #ff4444;
+          }
+
+          .update-modal, .update {
+              background-color: #a0a0ff;;
+          }
+
+          .thumbnail-container {
+              position: relative; /* Added for overlay positioning */
+              width: 200px;
+              height: 150px;
+              overflow: hidden;
+          }
+
+          .thumbnail-container img {
+              width: 100%;
+              height: 100%;
+              object-fit: content;
+          }
+
           .video-item .thumbnail-container::before {
               content: '';
               position: absolute;
@@ -206,6 +227,30 @@ class VideoItem extends HTMLElement {
               transform: translate(-50%, -50%) scale(1);
           }
 
+          #title {
+            width: 400px;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            outline: none;
+          }
+          
+          #description {
+            width: 400px;
+            height: 70px;
+            padding: 10px;
+            border-radius: 5px;
+            border: none;
+            outline: none;
+          }
+
+          .special-red {
+            color: #ff8e8e;
+          }
+
+          .special-blue {
+            color: #a0a0ff;
+          }
           .modal {
               position: fixed;
               top: 0;
@@ -230,7 +275,7 @@ class VideoItem extends HTMLElement {
               background-color: #2b2b2b;
               padding: 2rem;
               border-radius: 8px;
-              text-align: center;
+              text-align: left;
               color: #eee;
               max-width: 420px;
               width: 90%;
@@ -240,6 +285,16 @@ class VideoItem extends HTMLElement {
           }
           .modal[style*="display: flex"] .modal-content {
               transform: scale(1);
+          }
+
+          .modal input, .modal textarea, .modal label {
+              font-size: 1.125em;
+              border-radius: 5px;
+              outline: none;
+              border: none;
+              padding: 0.25em;
+              margin: 0.125em;
+              width: 100%;
           }
 
           .modal-actions {
@@ -260,6 +315,7 @@ class VideoItem extends HTMLElement {
                 background-color: #3f3f3f;
                 padding: 0.5rem;
                 border-radius: 4px;
+                text-align: center;
            }
 
            .action-button.cancel {
@@ -285,8 +341,10 @@ class VideoItem extends HTMLElement {
               <p class="description"></p>
           </div>
           <div class="actions">
+              <button class="action-button update-modal" title="Update Video">Edit</button>
               <button class="action-button delete-modal" title="Delete Video">Delete</button>
           </div>
+
       </div>
     `;
 
@@ -305,37 +363,120 @@ class VideoItem extends HTMLElement {
       </div>
     `;
 
+    const updateModalTemplate = document.createElement("template");
+    updateModalTemplate.innerHTML = `
+      <div class="modal" id="updateModal">
+          <div class="modal-content">
+              <section id="form-section">
+                <form id="file-form">
+                  <label for="title">Title</label>
+                  <br />
+                  <input
+                    id="title"
+                    type="text"
+                    name="title"
+                    required
+                  />
+
+                  <span id="titleError" class="special-red" style="display: none"></span>
+
+                  <br />
+                  <br />
+
+                  <label class="block" for="description">Description</label>
+                  <br />
+                  <textarea
+                    id="description"
+                    type="text"
+                    name="description"
+                    required
+                  ></textarea>
+
+                  <span
+                    id="descriptionError"
+                    class="special-red"
+                    style="display: none"
+                  ></span>
+
+                  <br />
+                  <div class="modal-actions">
+                    <button type="button" class="action-button cancel">Cancel</button>
+                    <button type="submit" class="action-button update">Save</button>
+                  </div>
+                </form>
+              </section>
+          </div>
+      </div>
+  `;
+
     this.shadow.appendChild(style);
     this.shadow.appendChild(template.content.cloneNode(true));
+    this.shadow.appendChild(updateModalTemplate.content.cloneNode(true));
     this.shadow.appendChild(modalTemplate.content.cloneNode(true));
 
     this.videoItemElement = this.shadow.querySelector('.video-item');
     this.modalElement = this.shadow.querySelector('#deleteConfirmModal');
+    this.updateModalElement = this.shadow.querySelector('#updateModal');
 
     this.initialize();
     this.initializeModal();
+    this.initializeUpdateModal();
   }
 
 
   initialize() {
-       this.videoItemElement.addEventListener('click', (e) => {
-          if (e.target.closest('.actions')) {
-              return;
-          }
-           e.preventDefault();
-           this.handlePlay();
-       });
+    this.videoItemElement.addEventListener('click', (e) => {
+      if (e.target.closest('.actions')) {
+          return;
+      }
+       e.preventDefault();
+       this.handlePlay();
+   });
 
-        const deleteModalButton = this.shadow.querySelector('.delete-modal');
-        if (deleteModalButton) {
-             deleteModalButton.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  const fileName = this.getAttribute("name") || "this video";
-                  const fileNameElement = this.modalElement.querySelector(".name");
-                  fileNameElement.textContent = fileName;
-                  this.modalElement.style.display = "flex";
-             });
-        }
+    const deleteModalButton = this.shadow.querySelector('.delete-modal');
+    if (deleteModalButton) {
+         deleteModalButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const fileName = this.getAttribute("name") || "this video";
+              const fileNameElement = this.modalElement.querySelector(".name");
+              fileNameElement.textContent = fileName;
+              this.modalElement.style.display = "flex";
+         });
+    }
+
+    const updateModalButton = this.shadow.querySelector('.update-modal');
+    if (updateModalButton) {
+      updateModalButton.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const title = this.getAttribute("name");
+              const fileNameElement = this.updateModalElement.querySelector("#title");
+              fileNameElement.value = title;
+              const description = this.getAttribute("description");
+              const descriptionElement = this.updateModalElement.querySelector("#description");
+              descriptionElement.value = description;
+              this.updateModalElement.style.display = "flex";
+         });
+    }
+  }
+
+  initializeUpdateModal() {
+    const cancelButton = this.updateModalElement.querySelector("#updateModal .cancel");
+    const fileForm = this.updateModalElement.querySelector("#file-form");
+
+    cancelButton.addEventListener("click", () => {
+      this.updateModalElement.style.display = "none";
+    });
+
+    fileForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      this.handleUpdate();
+    });
+
+    this.updateModalElement.addEventListener("click", (e) => {
+      if (e.target === this.updateModalElement) {
+        this.updateModalElement.style.display = "none";
+      }
+    });
   }
 
   initializeModal() {
@@ -431,6 +572,59 @@ class VideoItem extends HTMLElement {
             deleteButton.title = originalTitle;
             deleteButton.disabled = false;
         }, 2500);
+      });
+  }
+
+  handleUpdate() {
+    const videoId = this.getAttribute("video-id");
+    const updateButton = this.shadowRoot.querySelector(".update");
+    const titleElement = this.shadowRoot.getElementById("title");
+    const descriptionElement = this.shadowRoot.getElementById("description");
+    const titleError = this.shadowRoot.getElementById("titleError");
+    const descriptionError = this.shadowRoot.getElementById("descriptionError");
+
+    const title = titleElement.value;
+    const description = descriptionElement.value;
+    const regex = /^[a-zA-Z0-9\s\-_',.!&():]+$/;
+
+    if (!regex.test(title)) {
+      titleError.textContent = "Invalid Title";
+      titleError.style.display = "block";
+      return;
+    }
+
+    if (!regex.test(description)) {
+      descriptionError.textContent = "Invalid Description";
+      descriptionError.style.display = "block";
+      return;
+    }
+
+    updateButton.textContent = "Saving...";
+
+    const changes = {
+      title,
+      description,
+    };
+
+    fetch(`${window.ENV.API_URL}/video/${videoId}`, {
+      method: "PATCH",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(changes),
+    })
+      .then((response) => {
+        if (response.ok) {
+          this.remove();
+          window.location.reload(true);
+        } else {
+          updateButton.textContent = "Error";
+        }
+      })
+      .catch((error) => {
+        updateButton.textContent = "Error";
+        console.error("Error updating video details:", error);
       });
   }
 
