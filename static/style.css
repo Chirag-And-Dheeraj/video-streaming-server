@@ -92,15 +92,12 @@ main section ul {
 main section {
   display: flex;
   flex-direction: column;
-  /* border: solid red 2px; */
   padding: 0.5em;
   margin: 0.5em;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  /* align-items: center; */
   text-align: left;
-  /* text-align-last: center; */
 }
 
 main section label,
@@ -113,8 +110,6 @@ main section textarea,
   border: none;
   padding: 0.25em;
   margin: 0.125em;
-  /* text-align: center; */
-  /* text-align-last: center; */
   width: 100%;
 }
 

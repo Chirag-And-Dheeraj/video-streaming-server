@@ -168,36 +168,6 @@ class VideoItem extends HTMLElement {
               background-color: #a0a0ff;;
           }
 
-          .modal {
-              display: none;
-              position: fixed;
-              top: 0;
-              left: 0;
-              width: 100%;
-              height: 100%;
-              background-color: rgba(0, 0, 0, 0.5);
-              z-index: 1000;
-          }
-
-          .modal-content {
-              position: absolute;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%);
-              background-color: #262626;
-              padding: 2rem;
-              border-radius: 8px;
-              text-align: left;
-              color: white;
-          }
-
-          .modal-actions {
-              display: flex;
-              justify-content: center;
-              gap: 1rem;
-              margin-top: 1rem;
-          }
-
           .thumbnail-container {
               position: relative; /* Added for overlay positioning */
               width: 200px;
@@ -211,7 +181,6 @@ class VideoItem extends HTMLElement {
               object-fit: content;
           }
 
-          .video-item:hover .thumbnail-container::before {
           .video-item .thumbnail-container::before {
               content: '';
               position: absolute;
@@ -265,6 +234,7 @@ class VideoItem extends HTMLElement {
             border: none;
             outline: none;
           }
+          
           #description {
             width: 400px;
             height: 70px;
@@ -305,7 +275,7 @@ class VideoItem extends HTMLElement {
               background-color: #2b2b2b;
               padding: 2rem;
               border-radius: 8px;
-              text-align: center;
+              text-align: left;
               color: #eee;
               max-width: 420px;
               width: 90%;
@@ -315,6 +285,16 @@ class VideoItem extends HTMLElement {
           }
           .modal[style*="display: flex"] .modal-content {
               transform: scale(1);
+          }
+
+          .modal input, .modal textarea, .modal label {
+              font-size: 1.125em;
+              border-radius: 5px;
+              outline: none;
+              border: none;
+              padding: 0.25em;
+              margin: 0.125em;
+              width: 100%;
           }
 
           .modal-actions {
@@ -335,6 +315,7 @@ class VideoItem extends HTMLElement {
                 background-color: #3f3f3f;
                 padding: 0.5rem;
                 border-radius: 4px;
+                text-align: center;
            }
 
            .action-button.cancel {
@@ -394,7 +375,6 @@ class VideoItem extends HTMLElement {
                     id="title"
                     type="text"
                     name="title"
-                    value="${this.getAttribute("name")}"
                     required
                   />
 
@@ -410,7 +390,7 @@ class VideoItem extends HTMLElement {
                     type="text"
                     name="description"
                     required
-                  >${this.getAttribute("description")}</textarea>
+                  ></textarea>
 
                   <span
                     id="descriptionError"
@@ -468,25 +448,23 @@ class VideoItem extends HTMLElement {
     if (updateModalButton) {
       updateModalButton.addEventListener('click', (e) => {
               e.stopPropagation();
+              const title = this.getAttribute("name");
+              const fileNameElement = this.updateModalElement.querySelector("#title");
+              fileNameElement.value = title;
+              const description = this.getAttribute("description");
+              const descriptionElement = this.updateModalElement.querySelector("#description");
+              descriptionElement.value = description;
               this.updateModalElement.style.display = "flex";
          });
     }
   }
 
   initializeUpdateModal() {
-    const modal = this.shadow.querySelector("#updateModal");
-    const cancelButton = modal.querySelector("#updateModal .cancel");
-    const fileForm = modal.querySelector("#file-form");
-
-    this.shadowRoot.addEventListener("click", (e) => {
-      if (e.target.classList.contains("update-modal")) {
-        e.stopPropagation();
-        modal.style.display = "block";
-      }
-    });
+    const cancelButton = this.updateModalElement.querySelector("#updateModal .cancel");
+    const fileForm = this.updateModalElement.querySelector("#file-form");
 
     cancelButton.addEventListener("click", () => {
-      modal.style.display = "none";
+      this.updateModalElement.style.display = "none";
     });
 
     fileForm.addEventListener("submit", (e) => {
@@ -494,9 +472,9 @@ class VideoItem extends HTMLElement {
       this.handleUpdate();
     });
 
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        modal.style.display = "none";
+    this.updateModalElement.addEventListener("click", (e) => {
+      if (e.target === this.updateModalElement) {
+        this.updateModalElement.style.display = "none";
       }
     });
   }
