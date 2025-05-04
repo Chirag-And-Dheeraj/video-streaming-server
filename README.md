@@ -56,7 +56,7 @@ Dekho is a research and study project aimed at understanding and learning about 
 <details>
 <summary>View Architecture Diagram</summary>
 
-![Architecture Diagram](https://user-images.githubusercontent.com/52416311/167314446-c991f74d-e579-438d-a6ad-b65b7e721e7f.png)
+![Architecture Diagram](https://github.com/user-attachments/assets/a923f1f5-4a1a-4ded-aecc-a97f135e4413)
 
 </details>
 
