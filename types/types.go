@@ -112,7 +112,7 @@ func (u *User) GetEmail() string {
 type UploadStatus int
 
 const (
-	StatusUploadFailed    UploadStatus = -1
-	StatusUploadPending   UploadStatus = 0
-	StatusUploadCompleted UploadStatus = 1
+	UploadFailed    UploadStatus = -1
+	UploadPending   UploadStatus = 0
+	UploadCompleted UploadStatus = 1
 )

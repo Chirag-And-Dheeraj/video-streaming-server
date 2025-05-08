@@ -451,7 +451,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 		log.Println("Extracted thumbnail " + extractedThumbnail)
 		err = uploadThumbnailToAppwrite(fileName, db)
 		if err != nil {
-			log.Println("Error uploading thumbnail to Appwrite Storage")
+			log.Printf("Error uploading thumbnail to Appwrite Storage for video %s : %v", fileName, err)
 		}
 	}
 
@@ -459,26 +459,26 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 
 	breakResult, err := breakFile(("./video/" + serverFileName), fileName)
 	if breakResult {
-		log.Println("Successfully broken " + fileName + " into .ts files.")
+		log.Println("Successfully broken " + fileName + "into .ts files.")
 		log.Println("Deleting the original file from server.")
 		err = closeVideoFile(tmpFile)
 		if err != nil {
-			log.Println("Error closing temporary file: " + tmpFile.Name())
-			if err := updateUploadStatus(db, fileName, types.StatusUploadFailed); err != nil {
+			log.Printf("Error closing temporary file %s: %v", tmpFile.Name(), err)
+			if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
 				log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 			}
 		}
 		err = uploadToAppwrite(fileName, db)
 		if err != nil {
-			log.Println("Error uploading chunks of " + fileName + " to Appwrite Storage")
-			if err := updateUploadStatus(db, fileName, types.StatusUploadFailed); err != nil {
+			log.Printf("Error uploading chunks of %s to Appwrite Storage : %v", fileName, err)
+			if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
 				log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 			}
 		}
-		log.Println("Successfully uploaded chunks of", fileName, "to Appwrite Storage")
+		log.Printf("Successfully uploaded chunks of %s to Appwrite Storage", fileName)
 	} else {
-		log.Println("Error breaking " + fileName + " into .ts files.")
-		if err := updateUploadStatus(db, fileName, types.StatusUploadFailed); err != nil {
+		log.Printf("Error breaking %s into .ts files : %v", fileName, err)
+		if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
 			log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 		}
 	}
@@ -743,7 +743,7 @@ func SendError(w http.ResponseWriter, statusCode int, message string) {
 }
 
 func updateUploadStatus(db *sql.DB, videoID string, status types.UploadStatus) error {
-	log.Printf("Updating upload status to -1 for video_id %s", videoID)
+	log.Printf("Updating upload status to %v for video_id %s", status, videoID)
 
 	const query = `
 		UPDATE videos
@@ -767,6 +767,6 @@ func updateUploadStatus(db *sql.DB, videoID string, status types.UploadStatus) e
 		return fmt.Errorf("no record found for video_id: %s", videoID)
 	}
 
-	log.Printf("Successfully updated upload status for video_id %s to -1.\n", videoID)
+	log.Printf("Successfully updated upload status for video_id %s to %v.\n", videoID, status)
 	return nil
 }
