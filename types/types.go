@@ -108,3 +108,11 @@ func (u *User) GetUsername() string {
 func (u *User) GetEmail() string {
 	return u.Email
 }
+
+type UploadStatus int
+
+const (
+	UploadFailed    UploadStatus = -1
+	UploadPending   UploadStatus = 0
+	UploadCompleted UploadStatus = 1
+)
