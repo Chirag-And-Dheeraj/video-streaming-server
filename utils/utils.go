@@ -474,8 +474,9 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 			if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
 				log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 			}
-		}
-		log.Printf("Successfully uploaded chunks of %s to Appwrite Storage", fileName)
+		} else {
+			log.Printf("Successfully uploaded chunks of %s to Appwrite Storage", fileName)
+		}	
 	} else {
 		log.Printf("Error breaking %s into .ts files : %v", fileName, err)
 		if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
