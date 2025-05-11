@@ -20,23 +20,9 @@
             : `https://${window.location.hostname}`,
       };
     </script>
-    <link
-      rel="apple-touch-icon"
-      sizes="180x180"
-      href="../static/logo/apple-touch-icon.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="32x32"
-      href="../static/logo/favicon-32x32.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="16x16"
-      href="../static/logo/favicon-16x16.png"
-    />
+    <link rel="apple-touch-icon" sizes="180x180" href="../static/logo/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../static/logo/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="../static/logo/favicon-16x16.png" />
     <link rel="stylesheet" href="../static/style.css" />
     <title>Dekho: Upload Page</title>
   </head>
@@ -83,20 +69,11 @@
           ></textarea>
           <br />
 
-          <p
-            id="descriptionError"
-            class="special-red"
-            style="display: none"
-          ></p>
+          <p id="descriptionError" class="special-red" style="display: none"></p>
 
           <br />
           <label for="video">Drop that video...</label>
-          <input
-            id="video"
-            type="file"
-            name="video"
-            accept=".mp4, .mkv, .mov"
-          />
+          <input id="video" type="file" name="video" accept=".mp4, .mkv, .mov" />
           <br />
 
           <p id="fileError" class="special-red" style="display: none"></p>
@@ -108,14 +85,13 @@
           <div id="divOutput" class="upload-status special-blue"></div>
 
           <br />
-          <button id="uploadVideoButton" class="primaryButton" type="submit">
-            Submit
-          </button>
+          <button id="uploadVideoButton" class="primaryButton" type="submit">Submit</button>
 
           <div id="divOutput"></div>
         </form>
       </section>
     </main>
+    <script src="../static/sse-client.js"></script>
     <script src="../static/index.js"></script>
     <script src="../static/upload.js"></script>
     <script src="../static/script.js"></script>

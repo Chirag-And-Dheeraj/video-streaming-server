@@ -16,6 +16,7 @@ import (
 	"video-streaming-server/middleware"
 	"video-streaming-server/repositories"
 	"video-streaming-server/services"
+	"video-streaming-server/types"
 	"video-streaming-server/utils"
 )
 
@@ -214,27 +215,41 @@ func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Println("SSE API IS CONNECTED OKAY.")
+	user, _ := utils.GetUserFromRequest(r)
+
+	log.Printf("User %s connected to the event stream", user.Username)
 
 	clientGone := r.Context().Done()
 	rc := http.NewResponseController(w)
-
-	if n, err := fmt.Fprintf(w, "event:cpu\ndata:User:bhai\n\n"); err != nil {
-		log.Printf("Unable to write: %s", err.Error())
-	} else {
-		log.Printf("Wrote %d bytes", n)
-	}
 
 	rc.Flush()
 
 	for {
 		select {
 		case <-clientGone:
-			log.Println("Client is ded, I am sed 😞")
+			log.Printf("user %s disconnected from the event stream", user.Username)
 			return
-		case msg := <-utils.EventsChannel:
-			log.Println("received message bhai " + msg)
-			if n, err := fmt.Fprintf(w, "event:cpu\ndata:User:%s\n\n", msg); err != nil {
+		case rawMessage := <-utils.EventsChannel:
+			log.Println("Received raw message:", rawMessage)
+
+			// Hardcoded for test — replace with actual event struct later
+			sseResponse := types.SSEResponse{
+				Event: "upload_status",
+				Data: map[string]string{
+					"id":     "aand-mand-khatola",
+					"status": "processed",
+				},
+			}
+
+			// Marshal the data part to JSON
+			dataBytes, err := json.Marshal(sseResponse.Data)
+			if err != nil {
+				log.Printf("Failed to marshal SSE data: %s", err.Error())
+				continue
+			}
+
+			log.Printf("Server wants to send event: %s message: %s to user: %s", sseResponse.Event, string(dataBytes), user.Username)
+			if n, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", sseResponse.Event, string(dataBytes)); err != nil {
 				log.Printf("Unable to write: %s", err.Error())
 			} else {
 				log.Printf("Wrote %d bytes", n)

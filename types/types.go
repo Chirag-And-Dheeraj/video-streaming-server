@@ -37,6 +37,11 @@ type Video struct {
 	UploadStatus int            `json:"upload_status"`
 }
 
+type SSEResponse struct {
+	Event string            `json:"event"`
+	Data  map[string]string `json:"data"`
+}
+
 type Session struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`
