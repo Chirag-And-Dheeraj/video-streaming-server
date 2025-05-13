@@ -37,6 +37,17 @@ type Video struct {
 	UploadStatus int            `json:"upload_status"`
 }
 
+type SessionID string
+
+type SessionSSEChannelMap struct {
+	Channels map[SessionID]SSEChannel `json:"-"`
+}
+
+type SSEChannel struct {
+	OriginatingPage string      `json:"originating_page"`
+	EventChannel    chan string `json:"-"`
+}
+
 type SSEResponse struct {
 	Event string            `json:"event"`
 	Data  map[string]string `json:"data"`

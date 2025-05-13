@@ -120,6 +120,9 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if fileInfo.Size() == int64(fileSize) {
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("Video received completely and is now being processed."))
+		// the function below needs a place where it can send the processing status
+		// so we use the user ID to get all open sessions of that user
+		// and lastly use a for loop to send all the data to each channel for that user.
 		go utils.PostUploadProcessFile(serverFileName, fileName, tmpFile, db)
 
 	} else {
