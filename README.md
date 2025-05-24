@@ -1,4 +1,4 @@
-# Dekho: A Journey into Audio/Video Streaming
+# Dekho: An on-demand video streaming server
 
 ## Some Achievements ✨
 
@@ -53,12 +53,7 @@ Dekho is a research and study project aimed at understanding and learning about 
 
 ## Project Architecture
 
-<details>
-<summary>View Architecture Diagram</summary>
-
-![Architecture Diagram](https://github.com/user-attachments/assets/a923f1f5-4a1a-4ded-aecc-a97f135e4413)
-
-</details>
+![Architecture Diagram](documentation/static/dekho-architecture.excalidraw.png)
 
 ## Key Resources
 

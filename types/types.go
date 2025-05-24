@@ -38,9 +38,10 @@ type Video struct {
 }
 
 type SessionID string
+type UserID string
 
 type SessionSSEChannelMap struct {
-	Channels map[SessionID]SSEChannel `json:"-"`
+	Channels map[SessionID]SSEChannel `json:"channels"`
 }
 
 type SSEChannel struct {

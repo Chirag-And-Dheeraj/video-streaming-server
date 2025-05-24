@@ -12,6 +12,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -22,6 +23,7 @@ import (
 	"video-streaming-server/types"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 func LoadEnvVars() {
@@ -775,4 +777,80 @@ func updateUploadStatus(db *sql.DB, videoID string, status types.UploadStatus) e
 
 	log.Printf("Successfully updated upload status for video_id %s to %v.\n", videoID, status)
 	return nil
+}
+
+// map of user ID and SessionSSEChannelMap
+var GlobalUserSSEConnectionsMap = make(map[types.UserID]types.SessionSSEChannelMap)
+
+func InitializeSSEConnection(userID types.UserID, path string) types.SessionID {
+	sessionID := types.SessionID(uuid.New().String())
+	log.Printf("userID is: %s", userID)
+	log.Printf("originating page is: %s", path)
+	userSSEChannelMap, userExists := GlobalUserSSEConnectionsMap[userID]
+	if !userExists {
+		log.Printf("user %s not found in GlobalUserSSEConnectionsMap", userID)
+		userSSEChannelMap = types.SessionSSEChannelMap{
+			Channels: make(map[types.SessionID]types.SSEChannel),
+		}
+	}
+	userSSEChannelMap.Channels[sessionID] = CreateNewSSEChannel(path, 10)
+	GlobalUserSSEConnectionsMap[userID] = userSSEChannelMap
+	return sessionID
+}
+
+func RemoveSSEConnection(userID types.UserID, sessionID types.SessionID) {
+	log.Printf("userID is: %s", userID)
+	log.Printf("sessionID to be deleted is: %s", sessionID)
+	userSSEChannelMap, userExists := GlobalUserSSEConnectionsMap[userID]
+	if !userExists {
+		log.Printf("user %s not found in GlobalUserSSEConnectionsMap", userID)
+		return
+	}
+	channel, channelExists := userSSEChannelMap.Channels[sessionID]
+	if !channelExists {
+		log.Printf("session %s not found in userSSEChannelMap", sessionID)
+		return
+	}
+	log.Printf("closing channel for user %s, session %s", userID, sessionID)
+	close(channel.EventChannel)
+	log.Printf("deleting sessionID %s from userSSEChannelMap of user %s", sessionID, userID)
+	delete(userSSEChannelMap.Channels, sessionID)
+	if len(userSSEChannelMap.Channels) == 0 {
+		log.Printf("all sessions for user %s are closed", userID)
+		log.Printf("deleting user %s from GlobalUserSSEConnectionsMap", userID)
+		delete(GlobalUserSSEConnectionsMap, userID)
+	} else {
+		GlobalUserSSEConnectionsMap[userID] = userSSEChannelMap // clarity
+	}
+
+	PrettyPrintMap(GlobalUserSSEConnectionsMap, "GlobalUserSSEConnectionsMap")
+}
+
+func GetRefererPathFromRequest(r *http.Request) (string, error) {
+	referer := r.Referer()
+	if referer == "" {
+		return "", errors.New("referer header is empty")
+	}
+	u, err := url.Parse(referer)
+	if err != nil {
+		log.Printf("error parsing referer URL '%s': %v", referer, err)
+		return "", err
+	}
+	return u.Path, nil
+}
+
+func CreateNewSSEChannel(refererPath string, bufferSize int) types.SSEChannel {
+	return types.SSEChannel{
+		OriginatingPage: refererPath,
+		EventChannel:    make(chan string, bufferSize),
+	}
+}
+
+func PrettyPrintMap(inputMap any, mapName string) {
+	data, err := json.MarshalIndent(inputMap, "", "  ")
+	if err != nil {
+		log.Printf("error marshaling %s map: %v", mapName, err)
+	} else {
+		log.Printf("%s:\n%s", mapName, data)
+	}
 }

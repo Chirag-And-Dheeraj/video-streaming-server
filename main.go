@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"log"
 	"net/http"
-	"net/url"
 	"regexp"
 	"time"
 	"video-streaming-server/config"
@@ -19,8 +18,6 @@ import (
 	"video-streaming-server/services"
 	"video-streaming-server/types"
 	"video-streaming-server/utils"
-
-	"github.com/google/uuid"
 )
 
 /*
@@ -220,9 +217,6 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 // 	EventChannel    chan string `json:"-"`
 // }
 
-// map of user ID and SessionSSEChannelMap
-var GlobalUserSSEConnectionsMap = make(map[string]types.SessionSSEChannelMap)
-
 func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -234,69 +228,24 @@ func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := utils.GetUserFromRequest(r)
+	path, _ := utils.GetRefererPathFromRequest(r)
 
-	referer := r.Referer()
+	newSessionID := utils.InitializeSSEConnection(types.UserID(user.ID), path)
+	defer utils.RemoveSSEConnection(types.UserID(user.ID), types.SessionID(newSessionID))
+	log.Printf("new sessionID is: %s", newSessionID)
+	utils.PrettyPrintMap(utils.GlobalUserSSEConnectionsMap, "GlobalUserSSEConnectionsMap")
 
-	u, err := url.Parse(referer)
-	if err != nil {
-		http.Error(w, "Invalid referer", http.StatusBadRequest)
-		return
-	}
-	path := u.Path
+	log.Printf("user %s connected to the event stream", user.Username)
 
-	log.Printf("Originating page is: %s", path)
-
-	channel := make(chan string, 10)
-
-	sseChannel := types.SSEChannel{
-		OriginatingPage: path,
-		EventChannel:    channel,
-	}
-
-	sessionID := types.SessionID(uuid.New().String())
-
-	log.Printf("session ID %s", sessionID)
-
-	// Check if GlobalSSEConnectionsMap already has an entry for this user
-	if userChannels, exists := GlobalUserSSEConnectionsMap[user.ID]; exists {
-		// User exists, add the new session to their existing channels
-		// User exists, but we need to check if Channels map is initialized
-		if userChannels.Channels == nil {
-			userChannels.Channels = make(map[types.SessionID]types.SSEChannel)
-		}
-		userChannels.Channels[sessionID] = sseChannel
-		GlobalUserSSEConnectionsMap[user.ID] = userChannels
-		log.Printf("Added new SSE channel for existing user %s with session %s", user.ID, sessionID)
-	} else {
-		// User doesn't exist yet, create a new entry
-		log.Println("DID NOT EXIST HAHA")
-		channels := make(map[types.SessionID]types.SSEChannel)
-		channels[sessionID] = sseChannel
-
-		sseChannelMap := types.SessionSSEChannelMap{
-			Channels: channels,
-		}
-		GlobalUserSSEConnectionsMap[user.ID] = sseChannelMap
-		log.Printf("Created new SSE channel map for user %s with session %s", user.ID, sessionID)
-	}
-
-	log.Printf("Global map %v", GlobalUserSSEConnectionsMap)
-
-	// check i GlobalSSEConnectionsMap if user.ID key exists or not
-	// if exists append add a new key-value pair to the Channels map inside SessionSSEChannelMap
-	// if not exists create a new key-value pair and add it to the Channels map inside the SessionSSEChannelMap
-
-	log.Printf("User %s connected to the event stream", user.Username)
-
-	clientGone := r.Context().Done()
+	disconnected := r.Context().Done()
 	rc := http.NewResponseController(w)
 
 	rc.Flush()
 
 	for {
 		select {
-		case <-clientGone:
-			log.Printf("user %s disconnected from the event stream", user.Username)
+		case <-disconnected:
+			log.Printf("user %s session %s disconnected", user.ID, newSessionID)
 			return
 
 		case rawMessage := <-utils.EventsChannel:
@@ -362,8 +311,6 @@ func initServer() {
 	database.DB = database.GetDBConn()
 	setUpRoutes(database.DB)
 	utils.ResumeUploadIfAny(database.DB)
-	utils.EventsChannel = make(chan string)
-	fmt.Println(utils.EventsChannel)
 }
 
 func main() {
