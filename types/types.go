@@ -41,7 +41,7 @@ type SessionID string
 type UserID string
 
 type SessionSSEChannelMap struct {
-	Channels map[SessionID]SSEChannel `json:"channels"`
+	Sessions map[SessionID]SSEChannel `json:"Sessions"`
 }
 
 type SSEChannel struct {

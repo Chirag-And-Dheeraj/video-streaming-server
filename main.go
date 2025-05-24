@@ -16,6 +16,8 @@ import (
 	"video-streaming-server/middleware"
 	"video-streaming-server/repositories"
 	"video-streaming-server/services"
+	"video-streaming-server/shared"
+	"video-streaming-server/sse"
 	"video-streaming-server/types"
 	"video-streaming-server/utils"
 )
@@ -205,18 +207,6 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// type SessionID string
-// type UserID string
-
-// type SSEConnection struct {
-// 	Channels map[SessionID]SSEChannel `json:"-"`
-// }
-
-// type SSEChannel struct {
-// 	OriginatingPage string      `json:"originating_page"`
-// 	EventChannel    chan string `json:"-"`
-// }
-
 func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -230,10 +220,13 @@ func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 	user, _ := utils.GetUserFromRequest(r)
 	path, _ := utils.GetRefererPathFromRequest(r)
 
-	newSessionID := utils.InitializeSSEConnection(types.UserID(user.ID), path)
-	defer utils.RemoveSSEConnection(types.UserID(user.ID), types.SessionID(newSessionID))
-	log.Printf("new sessionID is: %s", newSessionID)
-	utils.PrettyPrintMap(utils.GlobalUserSSEConnectionsMap, "GlobalUserSSEConnectionsMap")
+	userID := types.UserID(user.ID)
+	sessionID := types.SessionID(sse.InitializeSSEConnection(userID, path))
+
+	// defer sachMeDeferWaleFunctionsReturnKePehleExecuteHoteHainTestingFunction()
+	defer sse.RemoveSSEConnection(userID, sessionID)
+	log.Printf("new sessionID is: %s", sessionID)
+	utils.PrettyPrintMap(shared.GlobalUserSSEConnectionsMap, "GlobalUserSSEConnectionsMap")
 
 	log.Printf("user %s connected to the event stream", user.Username)
 
@@ -242,18 +235,15 @@ func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 
 	rc.Flush()
 
+	channel := shared.GlobalUserSSEConnectionsMap[userID].Sessions[sessionID].EventChannel
+
 	for {
 		select {
 		case <-disconnected:
-			log.Printf("user %s session %s disconnected", user.ID, newSessionID)
+			log.Printf("user %s session %s disconnected", userID, sessionID)
 			return
-
-		case rawMessage := <-utils.EventsChannel:
-			// WE ARE GOING TO RECEIVE MESSAGES HERE
-			// Every time I make a connection, I will have to create a new channel and store it in a global dict
-			// the dict can be of the type: user_id : [channels for each page]
-			log.Println("Received raw message:", rawMessage)
-
+		case rawMessage := <-channel:
+			log.Printf("user %s needs to be sent\n message: %s\n on session %s", userID, rawMessage, sessionID)
 			// Hardcoded for test — replace with actual event struct later
 			sseResponse := types.SSEResponse{
 				Event: "upload_status",

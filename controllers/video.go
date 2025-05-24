@@ -25,6 +25,8 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
 	user, err := utils.GetUserFromRequest(r)
 
+	userID := UserID(user.ID)
+
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "User not logged in.", http.StatusUnauthorized)
@@ -123,7 +125,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		// the function below needs a place where it can send the processing status
 		// so we use the user ID to get all open sessions of that user
 		// and lastly use a for loop to send all the data to each channel for that user.
-		go utils.PostUploadProcessFile(serverFileName, fileName, tmpFile, db)
+		go utils.PostUploadProcessFile(serverFileName, fileName, tmpFile, db, userID)
 
 	} else {
 		w.WriteHeader(http.StatusPartialContent)
@@ -366,7 +368,6 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-
 	if videoId == "" {
 		http.Error(w, "Missing 'id' query parameter", http.StatusBadRequest)
 		return
@@ -402,7 +403,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	} else {
 		rows, _ := result.RowsAffected()
-		if  rows == 0 {
+		if rows == 0 {
 			http.Error(w, "No record found with given ID", http.StatusNotFound)
 			return
 		}
