@@ -24,7 +24,7 @@ import (
 func CreateNewSSEChannel(refererPath string, bufferSize int) types.SSEChannel {
 	return types.SSEChannel{
 		OriginatingPage: refererPath,
-		EventChannel:    make(chan string, bufferSize),
+		EventChannel:    make(chan types.SSEType, bufferSize),
 	}
 }
 

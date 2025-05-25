@@ -34,7 +34,7 @@ type Video struct {
 	Title        string         `json:"title"`
 	Description  string         `json:"description"`
 	Thumbnail    sql.NullString `json:"thumbnail"`
-	UploadStatus int            `json:"upload_status"`
+	UploadStatus UploadStatus   `json:"upload_status"`
 }
 
 type SessionID string
@@ -45,19 +45,13 @@ type SessionSSEChannelMap struct {
 }
 
 type SSEChannel struct {
-	OriginatingPage string      `json:"originating_page"`
-	EventChannel    chan string `json:"-"`
+	OriginatingPage string       `json:"originating_page"`
+	EventChannel    chan SSEType `json:"-"`
 }
 
-type SSEResponse struct {
-	Event string            `json:"event"`
-	Data  map[string]string `json:"data"`
-}
-
-type Session struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	ExpiresAt time.Time `json:"expires_at"`
+type UploadStatusSSEResponse struct {
+	VideoID      string       `json:"video_id"`
+	UploadStatus UploadStatus `json:"upload_status"`
 }
 
 type User struct {
@@ -134,3 +128,8 @@ const (
 	UploadPending   UploadStatus = 0
 	UploadCompleted UploadStatus = 1
 )
+
+type SSEType struct {
+	Event string `json:"event"`
+	Data  any    `json:"data"`
+}

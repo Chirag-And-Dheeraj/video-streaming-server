@@ -243,25 +243,17 @@ func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 			log.Printf("user %s session %s disconnected", userID, sessionID)
 			return
 		case rawMessage := <-channel:
-			log.Printf("user %s needs to be sent\n message: %s\n on session %s", userID, rawMessage, sessionID)
-			// Hardcoded for test — replace with actual event struct later
-			sseResponse := types.SSEResponse{
-				Event: "upload_status",
-				Data: map[string]string{
-					"id":     "aand-mand-khatola",
-					"status": "processed",
-				},
-			}
 
-			// Marshal the data part to JSON
-			dataBytes, err := json.Marshal(sseResponse.Data)
+			message := rawMessage
+			event := message.Event
+			rawData := message.Data
+			eventData, err := json.Marshal(rawData)
 			if err != nil {
-				log.Printf("Failed to marshal SSE data: %s", err.Error())
+				log.Printf("failed marshalling data for event %s to user %s on session %s", event, userID, sessionID)
 				continue
 			}
-
-			log.Printf("Server wants to send event: %s message: %s to user: %s", sseResponse.Event, string(dataBytes), user.Username)
-			if n, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", sseResponse.Event, string(dataBytes)); err != nil {
+			log.Printf("sending event %s data %s to user %s on session %s", event, eventData, userID, sessionID)
+			if n, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, eventData); err != nil {
 				log.Printf("Unable to write: %s", err.Error())
 			} else {
 				log.Printf("Wrote %d bytes", n)
@@ -300,7 +292,7 @@ func initServer() {
 	utils.LoadEnvVars()
 	database.DB = database.GetDBConn()
 	setUpRoutes(database.DB)
-	utils.ResumeUploadIfAny(database.DB)
+	// utils.ResumeUploadIfAny(database.DB)
 }
 
 func main() {

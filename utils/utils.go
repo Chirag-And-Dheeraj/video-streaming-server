@@ -284,6 +284,7 @@ func ResumeUploadIfAny(db *sql.DB) {
 }
 
 func uploadToAppwrite(folderName string, db *sql.DB) error {
+	// TODO: Add a deferred cleanup function
 	files, err := os.ReadDir(fmt.Sprintf("segments/%s", folderName))
 
 	if err != nil {
@@ -309,7 +310,7 @@ func uploadToAppwrite(folderName string, db *sql.DB) error {
 			return err
 		}
 
-		uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files"
+		uploadRequestURL := "https://cloudddddddd.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files"
 
 		var requestBody bytes.Buffer
 		writer := multipart.NewWriter(&requestBody)
@@ -448,7 +449,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 	extractedThumbnail, err := extractThumbnail(("./video/" + serverFileName), fileName)
 
 	if err != nil {
-		log.Println("Error extractiong thumbnail for video " + fileName)
+		log.Println("Error extracting thumbnail for video " + fileName)
 	} else {
 		log.Println("Extracted thumbnail " + extractedThumbnail)
 		err = uploadThumbnailToAppwrite(fileName, db)
@@ -469,6 +470,11 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 			if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
 				log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 			}
+			shared.SendEventToUser(userID, "upload_status", types.UploadStatusSSEResponse{
+				VideoID:      fileName,
+				UploadStatus: types.UploadFailed,
+			})
+			return
 		}
 		err = uploadToAppwrite(fileName, db)
 		if err != nil {
@@ -476,15 +482,30 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 			if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
 				log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 			}
+			shared.SendEventToUser(userID, "upload_status", types.UploadStatusSSEResponse{
+				VideoID:      fileName,
+				UploadStatus: types.UploadFailed,
+			})
+			return
 		} else {
 			log.Printf("Successfully uploaded chunks of %s to Appwrite Storage", fileName)
-			shared.SendEventToUser(userID, "HAARAMI")
+			// TODO: database update for upload_status as completed should be here instead of `uploadToAppwrite`
+			shared.SendEventToUser(userID, "upload_status", types.UploadStatusSSEResponse{
+				VideoID:      fileName,
+				UploadStatus: types.UploadCompleted,
+			})
+
 		}
 	} else {
 		log.Printf("Error breaking %s into .ts files : %v", fileName, err)
 		if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
 			log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 		}
+		shared.SendEventToUser(userID, "upload_status", types.UploadStatusSSEResponse{
+			VideoID:      fileName,
+			UploadStatus: types.UploadFailed,
+		})
+		return
 	}
 }
 
