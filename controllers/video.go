@@ -154,8 +154,6 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		FROM
 			videos
 		WHERE
-			upload_status=1
-		AND 
 			delete_flag=0
 		AND
 			user_id=$1

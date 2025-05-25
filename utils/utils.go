@@ -310,7 +310,7 @@ func uploadToAppwrite(folderName string, db *sql.DB) error {
 			return err
 		}
 
-		uploadRequestURL := "https://cloudddddddd.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files"
+		uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files"
 
 		var requestBody bytes.Buffer
 		writer := multipart.NewWriter(&requestBody)
@@ -389,6 +389,8 @@ func uploadToAppwrite(folderName string, db *sql.DB) error {
 	}
 
 	log.Println("Updating upload status in database record...")
+
+	// TODO: use the function we have for updating video status.
 	updateStatement, err := db.Prepare(`
 	UPDATE
 		videos
