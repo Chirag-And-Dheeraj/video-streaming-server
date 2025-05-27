@@ -51,6 +51,7 @@ type SSEChannel struct {
 
 type UploadStatusSSEResponse struct {
 	VideoID      string       `json:"video_id"`
+	VideoTitle   string       `json:"video_title"`
 	UploadStatus UploadStatus `json:"upload_status"`
 }
 

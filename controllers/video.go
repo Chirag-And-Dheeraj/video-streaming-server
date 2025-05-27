@@ -24,6 +24,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	isFirstChunk := r.Header.Get("first-chunk")
 	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
 	user, err := utils.GetUserFromRequest(r)
+	title := r.Header.Get("title")
 
 	userID := UserID(user.ID)
 
@@ -43,7 +44,6 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	serverFileName := fileName + ".mp4"
 
 	if isFirstChunk == "true" {
-		title := r.Header.Get("title")
 		description := r.Header.Get("description")
 		log.Println("Started receiving chunks for: " + fileName)
 		log.Println("Size of the file received:", fileSize)
@@ -125,7 +125,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		// the function below needs a place where it can send the processing status
 		// so we use the user ID to get all open sessions of that user
 		// and lastly use a for loop to send all the data to each channel for that user.
-		go utils.PostUploadProcessFile(serverFileName, fileName, tmpFile, db, userID)
+		go utils.PostUploadProcessFile(serverFileName, fileName, title, tmpFile, db, userID)
 
 	} else {
 		w.WriteHeader(http.StatusPartialContent)
@@ -190,7 +190,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		if err != nil {
 			log.Println("Error scanning rows")
 			log.Println(err)
-			http.Error(w, "Error retreiving records", http.StatusInternalServerError)
+			http.Error(w, "Error retrieving records", http.StatusInternalServerError)
 			return
 		}
 
@@ -213,7 +213,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Error retreiving records", http.StatusInternalServerError)
+		http.Error(w, "Error retrieving records", http.StatusInternalServerError)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

@@ -445,7 +445,7 @@ func closeVideoFile(tmpFile *os.File) error {
 	return nil
 }
 
-func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.File, db *sql.DB, userID types.UserID) {
+func PostUploadProcessFile(serverFileName string, fileName string, videoTitle string, tmpFile *os.File, db *sql.DB, userID types.UserID) {
 	log.Println("Received all chunks for: " + serverFileName)
 
 	extractedThumbnail, err := extractThumbnail(("./video/" + serverFileName), fileName)
@@ -474,6 +474,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 			}
 			shared.SendEventToUser(userID, "upload_status", types.UploadStatusSSEResponse{
 				VideoID:      fileName,
+				VideoTitle:   videoTitle,
 				UploadStatus: types.UploadFailed,
 			})
 			return
@@ -486,6 +487,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 			}
 			shared.SendEventToUser(userID, "upload_status", types.UploadStatusSSEResponse{
 				VideoID:      fileName,
+				VideoTitle:   videoTitle,
 				UploadStatus: types.UploadFailed,
 			})
 			return
@@ -494,6 +496,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 			// TODO: database update for upload_status as completed should be here instead of `uploadToAppwrite`
 			shared.SendEventToUser(userID, "upload_status", types.UploadStatusSSEResponse{
 				VideoID:      fileName,
+				VideoTitle:   videoTitle,
 				UploadStatus: types.UploadCompleted,
 			})
 
@@ -505,6 +508,7 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 		}
 		shared.SendEventToUser(userID, "upload_status", types.UploadStatusSSEResponse{
 			VideoID:      fileName,
+			VideoTitle:   videoTitle,
 			UploadStatus: types.UploadFailed,
 		})
 		return
@@ -560,6 +564,7 @@ func GetFileId(fileName string) string {
 }
 
 func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId string) {
+	// TODO: Use SSEs here
 	fileBytes, err := GetManifestFile(w, videoId)
 
 	if err != nil {

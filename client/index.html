@@ -26,23 +26,9 @@
             : `https://${window.location.hostname}`,
       };
     </script>
-    <link
-      rel="apple-touch-icon"
-      sizes="180x180"
-      href="../static/logo/apple-touch-icon.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="32x32"
-      href="../static/logo/favicon-16x16.png"
-    />
-    <link
-      rel="icon"
-      type="image/png"
-      sizes="16x16"
-      href="../static/logo/favicon-32x32.png"
-    />
+    <link rel="apple-touch-icon" sizes="180x180" href="../static/logo/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../static/logo/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="../static/logo/favicon-32x32.png" />
     <link rel="stylesheet" href="../static/style.css" />
 
     <title>Dekho: Your Video Streaming Platform</title>
@@ -55,7 +41,7 @@
         <ul>
           {{if .IsLoggedIn}}
           <li><a class="special-blue" href="/upload">Upload</a></li>
-          <li><a class="special-blue" href="/list">My Videos</a></li>
+          <li><a class="special-blue" href="/list">Videos</a></li>
           <li><a class="special-red logout" onclick="logout()">Logout</a></li>
           {{else}}
           <li><a class="special-blue" href="/login">Login</a></li>
