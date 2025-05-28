@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 	"video-streaming-server/config"
+	"video-streaming-server/types"
 	. "video-streaming-server/types"
 	"video-streaming-server/utils"
 )
@@ -60,7 +61,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 						title,
 						description,
 						upload_initiate_time,
-						upload_status,
+						status,
 						delete_flag,
 						user_id
 					) 
@@ -125,6 +126,9 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		// the function below needs a place where it can send the processing status
 		// so we use the user ID to get all open sessions of that user
 		// and lastly use a for loop to send all the data to each channel for that user.
+
+		utils.UpdateVideoStatus(db, fileName, types.UploadedOnServer)
+
 		go utils.PostUploadProcessFile(serverFileName, fileName, title, tmpFile, db, userID)
 
 	} else {
@@ -150,11 +154,14 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			video_id,
 			title,
 			description,
-			thumbnail
+			thumbnail,
+			status
 		FROM
 			videos
 		WHERE
 			delete_flag=0
+		AND
+			status <> 0
 		AND
 			user_id=$1
 		ORDER BY
@@ -177,15 +184,16 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	log.Println("Query executed.")
 
-	records := make([]ListVideosResponseItem, 0)
+	records := make([]VideoResponseType, 0)
 
 	for rows.Next() {
 		var id string
 		var title string
 		var description string
 		var thumbnail sql.NullString
+		var status types.VideoStatus
 
-		err := rows.Scan(&id, &title, &description, &thumbnail)
+		err := rows.Scan(&id, &title, &description, &thumbnail, &status)
 
 		if err != nil {
 			log.Println("Error scanning rows")
@@ -199,11 +207,12 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			thumbValue = thumbnail.String
 		}
 
-		record := ListVideosResponseItem{
+		record := VideoResponseType{
 			ID:          id,
 			Title:       title,
 			Description: description,
 			Thumbnail:   thumbValue,
+			Status:      status,
 		}
 
 		records = append(records, record)

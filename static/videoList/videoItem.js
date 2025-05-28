@@ -56,7 +56,6 @@ class VideoItem extends HTMLElement {
            }
           :host(.grid-mode-item) .content {
               padding: 0.75rem 0.75rem 0.5rem 0.75rem;
-              text-align: left;
               overflow: hidden;
               flex-grow: 1;
               display: flex;
@@ -326,6 +325,54 @@ class VideoItem extends HTMLElement {
                background-color: #5a6268;
                border-color: #545b62;
            }
+
+          /* New styles for status display */
+          .status-message {
+            font-size: 0.9em;
+            margin-top: 0.5rem;
+            text-align: center;
+            padding: 0.5rem;
+            border-radius: 4px;
+            white-space: nowrap; /* Prevent wrapping for the message */
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .status-failed {
+            color: #ff4444;
+          }
+
+          .status-processing {
+            color: #ffcc00;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+
+          .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ffcc00;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            animation: spin 1s linear infinite;
+            margin-left: 8px;
+          }
+
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          /* Adjustments for status message in list and grid view */
+          :host(.list-mode-item) .content .status-message {
+            text-align: left;
+            margin-left: 0;
+          }
+
+          :host(.grid-mode-item) .content .status-message {
+            margin-top: auto; /* Push to bottom in grid view */
+            margin-bottom: 0.25rem;
+          }
       `;
 
     const template = document.createElement("template");
@@ -339,6 +386,7 @@ class VideoItem extends HTMLElement {
           <div class="content">
               <h3 class="name"></h3>
               <p class="description"></p>
+              <div class="status-message" style="display: none;"></div>
           </div>
           <div class="actions">
               <button class="action-button update-modal" title="Update Video">Edit</button>
@@ -414,48 +462,49 @@ class VideoItem extends HTMLElement {
     this.shadow.appendChild(updateModalTemplate.content.cloneNode(true));
     this.shadow.appendChild(modalTemplate.content.cloneNode(true));
 
-    this.videoItemElement = this.shadow.querySelector('.video-item');
-    this.modalElement = this.shadow.querySelector('#deleteConfirmModal');
-    this.updateModalElement = this.shadow.querySelector('#updateModal');
+    this.videoItemElement = this.shadow.querySelector(".video-item");
+    this.modalElement = this.shadow.querySelector("#deleteConfirmModal");
+    this.updateModalElement = this.shadow.querySelector("#updateModal");
+    this.statusMessageElement = this.shadow.querySelector(".status-message"); // Get the status message element
+    this.playButton = this.shadow.querySelector(".play-button"); // Get the play button
 
     this.initialize();
     this.initializeModal();
     this.initializeUpdateModal();
   }
 
-
   initialize() {
-    this.videoItemElement.addEventListener('click', (e) => {
-      if (e.target.closest('.actions')) {
-          return;
+    this.videoItemElement.addEventListener("click", (e) => {
+      if (e.target.closest(".actions")) {
+        return;
       }
-       e.preventDefault();
-       this.handlePlay();
-   });
+      e.preventDefault();
+      this.handlePlay();
+    });
 
-    const deleteModalButton = this.shadow.querySelector('.delete-modal');
+    const deleteModalButton = this.shadow.querySelector(".delete-modal");
     if (deleteModalButton) {
-         deleteModalButton.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const fileName = this.getAttribute("name") || "this video";
-              const fileNameElement = this.modalElement.querySelector(".name");
-              fileNameElement.textContent = fileName;
-              this.modalElement.style.display = "flex";
-         });
+      deleteModalButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const fileName = this.getAttribute("name") || "this video";
+        const fileNameElement = this.modalElement.querySelector(".name");
+        fileNameElement.textContent = fileName;
+        this.modalElement.style.display = "flex";
+      });
     }
 
-    const updateModalButton = this.shadow.querySelector('.update-modal');
+    const updateModalButton = this.shadow.querySelector(".update-modal");
     if (updateModalButton) {
-      updateModalButton.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const title = this.getAttribute("name");
-              const fileNameElement = this.updateModalElement.querySelector("#title");
-              fileNameElement.value = title;
-              const description = this.getAttribute("description");
-              const descriptionElement = this.updateModalElement.querySelector("#description");
-              descriptionElement.value = description;
-              this.updateModalElement.style.display = "flex";
-         });
+      updateModalButton.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const title = this.getAttribute("name");
+        const fileNameElement = this.updateModalElement.querySelector("#title");
+        fileNameElement.value = title;
+        const description = this.getAttribute("description");
+        const descriptionElement = this.updateModalElement.querySelector("#description");
+        descriptionElement.value = description;
+        this.updateModalElement.style.display = "flex";
+      });
     }
   }
 
@@ -484,14 +533,14 @@ class VideoItem extends HTMLElement {
     const deleteConfirmButton = this.modalElement.querySelector(".delete");
 
     cancelButton.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.modalElement.style.display = "none";
+      e.stopPropagation();
+      this.modalElement.style.display = "none";
     });
 
     deleteConfirmButton.addEventListener("click", (e) => {
-        e.stopPropagation();
-        this.modalElement.style.display = "none";
-        this.handleDelete();
+      e.stopPropagation();
+      this.modalElement.style.display = "none";
+      this.handleDelete();
     });
 
     this.modalElement.addEventListener("click", (e) => {
@@ -502,27 +551,34 @@ class VideoItem extends HTMLElement {
   }
 
   handlePlay() {
+    // Only allow playing if the video is not in a processing state
+    const status = parseInt(this.getAttribute("status")); // Parse status as integer
+    if (status === 1 || status === -1) {
+      // 1 for UploadedOnServer/Processing, -1 for ProcessingFailed
+      return; // Prevent playback if still processing or failed
+    }
+
     const videoId = this.getAttribute("video-id");
     if (videoId) {
       try {
-          const watchUrl = new URL(`${window.ENV.API_URL}/watch`);
-          watchUrl.searchParams.set('v', videoId);
-          window.location.href = watchUrl.toString();
-      } catch(e) {
-          console.error("Error creating watch URL:", e);
-          window.location.href = `/watch?v=${videoId}`;
+        const watchUrl = new URL(`${window.ENV.API_URL}/watch`);
+        watchUrl.searchParams.set("v", videoId);
+        window.location.href = watchUrl.toString();
+      } catch (e) {
+        console.error("Error creating watch URL:", e);
+        window.location.href = `/watch?v=${videoId}`;
       }
     } else {
-        console.error("Video ID attribute is missing, cannot play.");
+      console.error("Video ID attribute is missing, cannot play.");
     }
   }
 
   handleDelete() {
     const videoId = this.getAttribute("video-id");
     if (!videoId) {
-        console.error("Video ID missing, cannot delete.");
-        alert("Cannot delete video: ID is missing.");
-        return;
+      console.error("Video ID missing, cannot delete.");
+      alert("Cannot delete video: ID is missing.");
+      return;
     }
 
     const deleteButton = this.shadowRoot.querySelector(".delete-modal");
@@ -532,34 +588,37 @@ class VideoItem extends HTMLElement {
     deleteButton.title = "Deleting...";
     deleteButton.disabled = true;
 
-
     fetch(`${window.ENV.API_URL}/video/${videoId}`, {
       method: "DELETE",
       headers: {
-           'Accept': 'application/json'
-       }
+        Accept: "application/json",
+      },
     })
       .then(async (response) => {
         if (response.ok) {
           this.remove();
-           this.dispatchEvent(new CustomEvent('item-deleted', { bubbles: true, composed: true, detail: { id: videoId } }));
+          this.dispatchEvent(
+            new CustomEvent("item-deleted", {
+              bubbles: true,
+              composed: true,
+              detail: { id: videoId },
+            })
+          );
         } else {
-           let errorMsg = `HTTP ${response.status} ${response.statusText}`;
-           try {
-                const errData = await response.json();
-                errorMsg = errData.detail || errData.message || errorMsg;
-           } catch (e) {
-
-           }
-           console.error("Error deleting video:", errorMsg);
-           alert(`Failed to delete video: ${errorMsg}`);
-           deleteButton.textContent = "Error";
-           deleteButton.title = "Deletion failed";
-           setTimeout(() => {
-               deleteButton.textContent = originalText;
-               deleteButton.title = originalTitle;
-               deleteButton.disabled = false;
-           }, 2500);
+          let errorMsg = `HTTP ${response.status} ${response.statusText}`;
+          try {
+            const errData = await response.json();
+            errorMsg = errData.detail || errData.message || errorMsg;
+          } catch (e) {}
+          console.error("Error deleting video:", errorMsg);
+          alert(`Failed to delete video: ${errorMsg}`);
+          deleteButton.textContent = "Error";
+          deleteButton.title = "Deletion failed";
+          setTimeout(() => {
+            deleteButton.textContent = originalText;
+            deleteButton.title = originalTitle;
+            deleteButton.disabled = false;
+          }, 2500);
         }
       })
       .catch((error) => {
@@ -568,9 +627,9 @@ class VideoItem extends HTMLElement {
         deleteButton.textContent = "Error";
         deleteButton.title = "Deletion failed";
         setTimeout(() => {
-            deleteButton.textContent = originalText;
-            deleteButton.title = originalTitle;
-            deleteButton.disabled = false;
+          deleteButton.textContent = originalText;
+          deleteButton.title = originalTitle;
+          deleteButton.disabled = false;
         }, 2500);
       });
   }
@@ -629,19 +688,57 @@ class VideoItem extends HTMLElement {
   }
 
   static get observedAttributes() {
-    return ["name", "description", "thumbnail", "video-id"];
+    return ["name", "description", "thumbnail", "video-id", "status"];
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === 'thumbnail') {
-      const element = this.shadow.querySelector('.thumbnail');
-      if (element) element.src = newValue || '';
-    } else if (name === 'name') {
-      const element = this.shadow.querySelector('.content .name');
-       if (element) element.textContent = newValue || 'Untitled Video';
-    } else if (name === 'description') {
-      const element = this.shadow.querySelector('.content .description');
-       if (element) element.textContent = newValue || '';
+    if (name === "thumbnail") {
+      const element = this.shadow.querySelector(".thumbnail");
+      if (element) element.src = newValue || "";
+    } else if (name === "name") {
+      const element = this.shadow.querySelector(".content .name");
+      if (element) element.textContent = newValue || "Untitled Video";
+    } else if (name === "description") {
+      const element = this.shadow.querySelector(".content .description");
+      if (element) element.textContent = newValue || "";
+    } else if (name === "status") {
+      this.updateStatusDisplay(newValue);
+    }
+  }
+
+  updateStatusDisplay(status) {
+    this.statusMessageElement.style.display = "none"; // Hide by default
+    this.statusMessageElement.innerHTML = ""; // Clear existing content
+    this.statusMessageElement.classList.remove("status-failed", "status-processing"); // Clear classes
+    this.playButton.style.display = "block"; // Show play button by default
+
+    switch (
+      parseInt(status) // Parse status as integer
+    ) {
+      case -1: // ProcessingFailed
+        this.statusMessageElement.textContent = "Processing Failed";
+        this.statusMessageElement.classList.add("status-failed");
+        this.statusMessageElement.style.display = "block";
+        this.playButton.style.display = "none"; // Hide play button
+        break;
+      case 1: // UploadedOnServer/Processing
+        this.statusMessageElement.innerHTML = 'Processing <div class="loader"></div>';
+        this.statusMessageElement.classList.add("status-processing");
+        this.statusMessageElement.style.display = "flex"; // Use flex for loader alignment
+        this.playButton.style.display = "none"; // Hide play button
+        break;
+      // You can add more cases for other statuses if needed (e.g., 0 for pending, 2 for completed)
+      case 0: // UploadPending
+        this.statusMessageElement.textContent = "Upload Pending";
+        this.statusMessageElement.style.display = "block";
+        this.playButton.style.display = "none"; // Hide play button
+        break;
+      case 2: // ProcessingCompleted
+        // For processing completed, no status message is shown and play button remains visible
+        break;
+      default:
+        // Default case: no specific status message, play button visible
+        break;
     }
   }
 }

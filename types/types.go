@@ -30,11 +30,11 @@ type FFProbeOutput struct {
 }
 
 type Video struct {
-	ID           string         `json:"id"`
-	Title        string         `json:"title"`
-	Description  string         `json:"description"`
-	Thumbnail    sql.NullString `json:"thumbnail"`
-	UploadStatus UploadStatus   `json:"upload_status"`
+	ID          string         `json:"id"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	Thumbnail   sql.NullString `json:"thumbnail"`
+	Status      VideoStatus    `json:"status"`
 }
 
 type SessionID string
@@ -47,12 +47,6 @@ type SessionSSEChannelMap struct {
 type SSEChannel struct {
 	OriginatingPage string       `json:"originating_page"`
 	EventChannel    chan SSEType `json:"-"`
-}
-
-type UploadStatusSSEResponse struct {
-	VideoID      string       `json:"video_id"`
-	VideoTitle   string       `json:"video_title"`
-	UploadStatus UploadStatus `json:"upload_status"`
 }
 
 type User struct {
@@ -69,11 +63,12 @@ type ThumbnailUploadResponse struct {
 	BucketID string `json:"bucketId"`
 }
 
-type ListVideosResponseItem struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Thumbnail   string `json:"thumbnail"`
+type VideoResponseType struct {
+	ID          string      `json:"id"`
+	Title       string      `json:"title"`
+	Description string      `json:"description"`
+	Thumbnail   string      `json:"thumbnail"`
+	Status      VideoStatus `json:"status"`
 }
 
 func NewUser(username, email, password string) (*User, error) {
@@ -122,12 +117,13 @@ func (u *User) GetEmail() string {
 	return u.Email
 }
 
-type UploadStatus int
+type VideoStatus int
 
 const (
-	UploadFailed    UploadStatus = -1
-	UploadPending   UploadStatus = 0
-	UploadCompleted UploadStatus = 1
+	ProcessingFailed    VideoStatus = -1
+	UploadPending       VideoStatus = 0
+	UploadedOnServer    VideoStatus = 1
+	ProcessingCompleted VideoStatus = 2
 )
 
 type SSEType struct {
