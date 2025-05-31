@@ -98,7 +98,9 @@ class VideoList extends HTMLElement {
   }
 
   setViewMode(mode) {
-    if (this.viewMode === mode) return;
+    if (this.viewMode === mode) {
+      return;
+    }
 
     this.viewMode = mode;
     localStorage.setItem("viewMode", mode);

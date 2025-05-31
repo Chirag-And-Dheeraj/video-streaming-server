@@ -133,7 +133,7 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) (string, error) {
 		return "", err
 	}
 
-	request, err := http.NewRequest("POST", uploadRequestURL, &requestBody)
+	request, err := http.NewRequest(http.MethodPost, uploadRequestURL, &requestBody)
 	if err != nil {
 		log.Printf("Error creating request")
 		log.Println(err)
@@ -353,7 +353,7 @@ func uploadToAppwrite(folderName string, db *sql.DB) error {
 			return err
 		}
 
-		request, err := http.NewRequest("POST", uploadRequestURL, &requestBody)
+		request, err := http.NewRequest(http.MethodPost, uploadRequestURL, &requestBody)
 		if err != nil {
 			log.Printf("Error creating request")
 			log.Println(err)
@@ -499,7 +499,7 @@ func GetManifestFile(w http.ResponseWriter, videoId string) ([]byte, error) {
 
 	getManifestFile := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files/" + videoId + "/view"
 
-	request, err := http.NewRequest("GET", getManifestFile, nil)
+	request, err := http.NewRequest(http.MethodGet, getManifestFile, nil)
 
 	if err != nil {
 		return nil, err
@@ -563,7 +563,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	thumbnailFileId := GetFileId(thumbnailFileName)
 
-	request, err := http.NewRequest("DELETE", deleteUrl+thumbnailFileId, nil)
+	request, err := http.NewRequest(http.MethodDelete, deleteUrl+thumbnailFileId, nil)
 
 	if err != nil {
 		log.Println(err)
@@ -591,7 +591,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 			fileName := strings.Split(lines[i], ".")[0]
 			fileId := GetFileId(fileName)
 
-			request, err := http.NewRequest("DELETE", deleteUrl+fileId, nil)
+			request, err := http.NewRequest(http.MethodDelete, deleteUrl+fileId, nil)
 
 			if err != nil {
 				log.Println(err)
@@ -618,7 +618,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	log.Println("Deleted all .ts files...")
 
-	request, err = http.NewRequest("DELETE", deleteUrl+videoId, nil)
+	request, err = http.NewRequest(http.MethodDelete, deleteUrl+videoId, nil)
 
 	if err != nil {
 		log.Println(err)

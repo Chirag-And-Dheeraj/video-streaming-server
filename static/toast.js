@@ -129,30 +129,36 @@ class Toast {
 
   show(title, message, type = "success", duration = 7000) {
     this.init();
-
     const container = document.getElementById("toast-container");
     const toast = document.createElement("div");
-    const truncatedTitle = title.length > 15 ? title.substring(0, 15) + "..." : title;
     toast.className = `toast ${type}`;
-    toast.innerHTML = `
-        <div class="toast-icon">${type === "success" ? "✅" : "❌"}</div>
-        <div class="toast-content">
-            <div class="toast-title">${truncatedTitle}</div>
-            <div class="toast-message">${message}</div>
-        </div>
-        <button class="toast-close">✖</button>
-    `;
-
-    const closeButton = toast.querySelector(".toast-close");
-    closeButton.addEventListener("click", () => this.close(toast));
+    const icon = document.createElement("div");
+    icon.className = "toast-icon";
+    icon.textContent = type === "success" ? "✅" : "❌";
+    const content = document.createElement("div");
+    content.className = "toast-content";
+    const h4 = document.createElement("h4");
+    h4.className = "toast-title";
+    h4.textContent = title.length > 15 ? title.substring(0, 15) + "…" : title;
+    const p = document.createElement("p");
+    p.className = "toast-message";
+    p.textContent = message;
+    content.append(h4, p);
+    const btn = document.createElement("button");
+    btn.className = "toast-close";
+    btn.type = "button";
+    btn.textContent = "✖";
+    btn.addEventListener("click", () => {
+      toast.classList.remove("show");
+      setTimeout(() => toast.remove(), 300);
+    });
+    toast.append(icon, content, btn);
     container.appendChild(toast);
-    setTimeout(() => toast.classList.add("show"), 10);
+    requestAnimationFrame(() => toast.classList.add("show"));
     setTimeout(() => {
-      if (toast.parentNode) {
-        this.close(toast);
-      }
+      toast.classList.remove("show");
+      setTimeout(() => toast.remove(), 300);
     }, duration);
-    return toast;
   }
 
   close(toast) {

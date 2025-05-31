@@ -1,4 +1,6 @@
-const eventSource = new EventSource(`${window.ENV.API_URL}/server-events/`);
+const eventSource = new EventSource(`${window.ENV.API_URL}/server-events/`, {
+  withCredentials: true,
+});
 const toaster = new Toast();
 
 eventSource.onopen = () => {
@@ -10,6 +12,7 @@ eventSource.onerror = (error) => {
   eventSource.close();
 };
 
+// TODO: handle case when event comes when the element is not in the DOM
 eventSource.addEventListener("video_status", (event) => {
   try {
     const data = JSON.parse(event.data);

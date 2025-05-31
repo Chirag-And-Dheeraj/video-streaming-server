@@ -324,7 +324,7 @@ func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	getSegmentFile := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files/" + fileId + "/view"
 
-	request, err := http.NewRequest("GET", getSegmentFile, nil)
+	request, err := http.NewRequest(http.MethodGet, getSegmentFile, nil)
 
 	if err != nil {
 		log.Println(err)

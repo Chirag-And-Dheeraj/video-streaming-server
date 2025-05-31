@@ -33,10 +33,10 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	path := r.URL.Path
 	method := r.Method
 
-	if method == "POST" {
+	if method == http.MethodPost {
 		log.Println("POST: " + path)
 		controllers.UploadVideo(w, r, db)
-	} else if method == "GET" {
+	} else if method == http.MethodGet {
 		log.Println("GET: " + path)
 
 		if path == "/video/" {
@@ -57,12 +57,12 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
 			http.Error(w, response, http.StatusNotFound)
 		}
-	} else if method == "DELETE" {
+	} else if method == http.MethodDelete {
 		if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
 			log.Println("DELETE: " + path)
 			controllers.DeleteHandler(w, r, db)
 		}
-	} else if method == "PATCH" {
+	} else if method == http.MethodPatch {
 		if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
 			log.Println("Update Video Details")
 			controllers.UpdateHandler(w, r, db)
@@ -82,7 +82,7 @@ func homePageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -109,12 +109,12 @@ func registerPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	path := r.URL.Path
 	method := r.Method
 
-	if method == "POST" {
+	if method == http.MethodPost {
 		log.Println("POST: " + path)
 		userRepository := repositories.NewUserRepository(db)
 		userService := services.NewUserService(userRepository)
 		controllers.RegisterUser(w, r, userService)
-	} else if method == "GET" {
+	} else if method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/register.html"
 		http.ServeFile(w, r, p)
@@ -125,12 +125,12 @@ func loginPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	path := r.URL.Path
 	method := r.Method
 
-	if method == "POST" {
+	if method == http.MethodPost {
 		log.Println("POST: " + path)
 		userRepository := repositories.NewUserRepository(db)
 		userService := services.NewUserService(userRepository)
 		controllers.LoginUser(w, r, userService)
-	} else if method == "GET" {
+	} else if method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/login.html"
 		http.ServeFile(w, r, p)
@@ -138,7 +138,7 @@ func loginPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func uploadPageHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/upload.html"
 		http.ServeFile(w, r, p)
@@ -146,7 +146,7 @@ func uploadPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func listPageHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/list.html"
 		http.ServeFile(w, r, p)
@@ -154,7 +154,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func watchPageHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/watch.html"
 		http.ServeFile(w, r, p)
@@ -162,7 +162,7 @@ func watchPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func configHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -193,7 +193,7 @@ func configHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
+	if r.Method == http.MethodPost {
 		http.SetCookie(w, &http.Cookie{
 			Name:     "auth_token",
 			Value:    "",
@@ -208,17 +208,29 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: talk to Jaden about security review
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	user, _ := utils.GetUserFromRequest(r)
-	path, _ := utils.GetRefererPathFromRequest(r)
+	user, err := utils.GetUserFromRequest(r)
+	if err != nil {
+		log.Printf("failed to extract user from request: %v", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	path, err := utils.GetRefererPathFromRequest(r)
+	if err != nil {
+		log.Printf("failed to extract referer path from request: %v", err)
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
 
 	userID := types.UserID(user.ID)
 	sessionID := types.SessionID(sse.InitializeSSEConnection(userID, path))
@@ -233,6 +245,7 @@ func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 	disconnected := r.Context().Done()
 	rc := http.NewResponseController(w)
 
+	// the intent behind this flush is for an initial connection heartbeat
 	rc.Flush()
 
 	channel := shared.GlobalUserSSEConnectionsMap[userID].Sessions[sessionID].EventChannel
