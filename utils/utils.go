@@ -755,26 +755,57 @@ func SendError(w http.ResponseWriter, statusCode int, message string) {
 
 func UpdateVideoStatus(db *sql.DB, videoID string, status types.VideoStatus) error {
 	log.Printf("Updating upload status to %v for video_id %s", status, videoID)
+	switch status {
+	case types.ProcessingCompleted:
+		return handleProcessingCompletedStatus(db, videoID)
+	default:
+		return updateGenericVideoStatus(db, videoID, status)
+	}
+}
+
+func handleProcessingCompletedStatus(db *sql.DB, videoID string) error {
 
 	var query string
 	var result sql.Result
 	var err error
-
-	if status == types.ProcessingCompleted {
-		query = `
+	query = `
 			UPDATE videos
 			SET status = $1, upload_end_time = $2
 			WHERE video_id = $3;
 		`
-		result, err = db.Exec(query, status, time.Now(), videoID)
-	} else {
-		query = `
+	result, err = db.Exec(query, types.ProcessingCompleted, time.Now(), videoID)
+
+	if err != nil {
+		log.Printf("Failed to update upload status for video %s: %v\n", videoID, err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error checking affected rows for video %s: %v\n", videoID, err)
+		return err
+	}
+
+	if rowsAffected == 0 {
+		log.Printf("No video found with video_id %s to update.\n", videoID)
+		return fmt.Errorf("no record found for video_id: %s", videoID)
+	}
+
+	log.Printf("Successfully updated upload status for video_id %s to %v.\n", videoID, types.ProcessingCompleted)
+	return nil
+}
+
+func updateGenericVideoStatus(db *sql.DB, videoID string, status types.VideoStatus) error {
+
+	var query string
+	var result sql.Result
+	var err error
+	query = `
 			UPDATE videos
 			SET status = $1
 			WHERE video_id = $2;
 		`
-		result, err = db.Exec(query, status, videoID)
-	}
+	result, err = db.Exec(query, status, videoID)
 
 	if err != nil {
 		log.Printf("Failed to update upload status for video %s: %v\n", videoID, err)

@@ -5,7 +5,9 @@ class Toast {
   }
 
   init() {
-    if (this.initialized) return;
+    if (this.initialized) {
+      return;
+    }
     this.injectCSS();
     this.injectHTML();
     this.initialized = true;
@@ -13,7 +15,9 @@ class Toast {
 
   injectCSS() {
     // Check if CSS is already injected
-    if (document.getElementById("toast-styles")) return;
+    if (document.getElementById("toast-styles")) {
+      return;
+    }
 
     const style = document.createElement("style");
     style.id = "toast-styles";
@@ -114,7 +118,9 @@ class Toast {
   }
 
   injectHTML() {
-    if (document.getElementById("toast-container")) return;
+    if (document.getElementById("toast-container")) {
+      return;
+    }
     const container = document.createElement("div");
     container.id = "toast-container";
     container.className = "toast-container";

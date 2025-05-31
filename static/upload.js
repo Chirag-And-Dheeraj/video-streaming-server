@@ -150,18 +150,20 @@ fileForm.addEventListener("submit", async (e) => {
         window.removeEventListener("beforeunload", handleBeforeUnload);
         console.log("Upload completed - navigation protection disabled");
 
+        const COUNTDOWN_DURATION = 5;
+
         // Create a more detailed message container with countdown
         divOutput.innerHTML = `
           <div style="text-align: center;">
             <p>✅ Upload complete! Your video will be available soon on the List Files page.</p>
-            <p>Redirecting in <span id="countdown" style="font-weight: bold; color: #ff8e8e; font-size: 1.2em;">5</span> seconds...</p>
+            <p>Redirecting in <span id="countdown" style="font-weight: bold; color: #ff8e8e; font-size: 1.2em;">${COUNTDOWN_DURATION}</span> seconds...</p>
             <button onclick="window.location.href='/list'" style="margin-top: 10px; padding: 8px 16px; background: #a0a0ff; color: white; border: none; border-radius: 4px; cursor: pointer;">
               Go Now
             </button>
           </div>
         `;
 
-        let countdown = 5;
+        let countdown = COUNTDOWN_DURATION;
         const countdownElement = document.getElementById("countdown");
 
         const countdownInterval = setInterval(() => {

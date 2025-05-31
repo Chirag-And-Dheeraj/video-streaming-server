@@ -18,7 +18,7 @@ eventSource.addEventListener("video_status", (event) => {
     const videoId = data.id;
     const videoStatus = data.status;
     const videoTitle = data.title || "Unknown Video"; // Fallback title
-    const thumbnail = data.thumbnail;
+    const { thumbnail } = data;
 
     // First, get the video-container element
     const videoContainer = document.querySelector("video-container");

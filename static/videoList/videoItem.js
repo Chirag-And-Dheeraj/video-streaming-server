@@ -694,50 +694,51 @@ class VideoItem extends HTMLElement {
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === "thumbnail") {
       const element = this.shadow.querySelector(".thumbnail");
-      if (element) element.src = newValue || "";
+      if (element) {
+        element.src = newValue || "";
+      }
     } else if (name === "name") {
       const element = this.shadow.querySelector(".content .name");
-      if (element) element.textContent = newValue || "Untitled Video";
+      if (element) {
+        element.textContent = newValue || "Untitled Video";
+      }
     } else if (name === "description") {
       const element = this.shadow.querySelector(".content .description");
-      if (element) element.textContent = newValue || "";
+      if (element) {
+        element.textContent = newValue || "";
+      }
     } else if (name === "status") {
       this.updateStatusDisplay(newValue);
     }
   }
 
   updateStatusDisplay(status) {
-    this.statusMessageElement.style.display = "none"; // Hide by default
-    this.statusMessageElement.innerHTML = ""; // Clear existing content
-    this.statusMessageElement.classList.remove("status-failed", "status-processing"); // Clear classes
-    this.playButton.style.display = "block"; // Show play button by default
+    this.statusMessageElement.style.display = "none";
+    this.statusMessageElement.innerHTML = "";
+    this.statusMessageElement.classList.remove("status-failed", "status-processing");
+    this.playButton.style.display = "block";
 
-    switch (
-      parseInt(status) // Parse status as integer
-    ) {
-      case -1: // ProcessingFailed
+    switch (parseInt(status)) {
+      case -1:
         this.statusMessageElement.textContent = "Processing Failed";
         this.statusMessageElement.classList.add("status-failed");
         this.statusMessageElement.style.display = "block";
-        this.playButton.style.display = "none"; // Hide play button
+        this.playButton.style.display = "none";
         break;
-      case 1: // UploadedOnServer/Processing
+      case 1:
         this.statusMessageElement.innerHTML = 'Processing <div class="loader"></div>';
         this.statusMessageElement.classList.add("status-processing");
-        this.statusMessageElement.style.display = "flex"; // Use flex for loader alignment
-        this.playButton.style.display = "none"; // Hide play button
+        this.statusMessageElement.style.display = "flex";
+        this.playButton.style.display = "none";
         break;
-      // You can add more cases for other statuses if needed (e.g., 0 for pending, 2 for completed)
-      case 0: // UploadPending
+      case 0:
         this.statusMessageElement.textContent = "Upload Pending";
         this.statusMessageElement.style.display = "block";
-        this.playButton.style.display = "none"; // Hide play button
+        this.playButton.style.display = "none";
         break;
-      case 2: // ProcessingCompleted
-        // For processing completed, no status message is shown and play button remains visible
+      case 2:
         break;
       default:
-        // Default case: no specific status message, play button visible
         break;
     }
   }

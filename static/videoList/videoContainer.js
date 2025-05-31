@@ -151,6 +151,8 @@ class VideoList extends HTMLElement {
         videoItem.setAttribute("description", video.description || "");
         videoItem.setAttribute("thumbnail", video.thumbnail || "");
         videoItem.setAttribute("video-id", video.id);
+
+        // TODO: status should be validated (keep a set of allowed statuses, I guess?)
         videoItem.setAttribute("status", video.status); // Pass the status here
 
         videoItem.classList.add(this.viewMode === "grid" ? "grid-mode-item" : "list-mode-item");
