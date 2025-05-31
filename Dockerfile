@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 
 RUN go mod tidy
 
-RUN go install github.com/air-verse/air@latest
+RUN go install github.com/air-verse/air@v1.61.7
 
 RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 
