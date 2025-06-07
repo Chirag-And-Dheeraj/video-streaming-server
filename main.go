@@ -16,6 +16,9 @@ import (
 	"video-streaming-server/middleware"
 	"video-streaming-server/repositories"
 	"video-streaming-server/services"
+	"video-streaming-server/shared"
+	"video-streaming-server/sse"
+	"video-streaming-server/types"
 	"video-streaming-server/utils"
 )
 
@@ -30,10 +33,10 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	path := r.URL.Path
 	method := r.Method
 
-	if method == "POST" {
+	if method == http.MethodPost {
 		log.Println("POST: " + path)
 		controllers.UploadVideo(w, r, db)
-	} else if method == "GET" {
+	} else if method == http.MethodGet {
 		log.Println("GET: " + path)
 
 		if path == "/video/" {
@@ -54,12 +57,12 @@ func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
 			http.Error(w, response, http.StatusNotFound)
 		}
-	} else if method == "DELETE" {
+	} else if method == http.MethodDelete {
 		if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
 			log.Println("DELETE: " + path)
 			controllers.DeleteHandler(w, r, db)
 		}
-	} else if method == "PATCH" {
+	} else if method == http.MethodPatch {
 		if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
 			log.Println("Update Video Details")
 			controllers.UpdateHandler(w, r, db)
@@ -79,7 +82,7 @@ func homePageHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -106,12 +109,12 @@ func registerPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	path := r.URL.Path
 	method := r.Method
 
-	if method == "POST" {
+	if method == http.MethodPost {
 		log.Println("POST: " + path)
 		userRepository := repositories.NewUserRepository(db)
 		userService := services.NewUserService(userRepository)
 		controllers.RegisterUser(w, r, userService)
-	} else if method == "GET" {
+	} else if method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/register.html"
 		http.ServeFile(w, r, p)
@@ -122,12 +125,12 @@ func loginPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	path := r.URL.Path
 	method := r.Method
 
-	if method == "POST" {
+	if method == http.MethodPost {
 		log.Println("POST: " + path)
 		userRepository := repositories.NewUserRepository(db)
 		userService := services.NewUserService(userRepository)
 		controllers.LoginUser(w, r, userService)
-	} else if method == "GET" {
+	} else if method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/login.html"
 		http.ServeFile(w, r, p)
@@ -135,7 +138,7 @@ func loginPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func uploadPageHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/upload.html"
 		http.ServeFile(w, r, p)
@@ -143,7 +146,7 @@ func uploadPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func listPageHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/list.html"
 		http.ServeFile(w, r, p)
@@ -151,7 +154,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func watchPageHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
 		p := "./client/watch.html"
 		http.ServeFile(w, r, p)
@@ -159,7 +162,7 @@ func watchPageHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func configHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
+	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
@@ -190,7 +193,7 @@ func configHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func logoutHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
+	if r.Method == http.MethodPost {
 		http.SetCookie(w, &http.Cookie{
 			Name:     "auth_token",
 			Value:    "",
@@ -201,6 +204,75 @@ func logoutHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]bool{"success": true})
+	}
+}
+
+func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: talk to Jaden about security review
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user, err := utils.GetUserFromRequest(r)
+	if err != nil {
+		log.Printf("failed to extract user from request: %v", err)
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	path, err := utils.GetRefererPathFromRequest(r)
+	if err != nil {
+		log.Printf("failed to extract referer path from request: %v", err)
+		http.Error(w, "Bad Request", http.StatusBadRequest)
+		return
+	}
+
+	userID := types.UserID(user.ID)
+	sessionID := types.SessionID(sse.InitializeSSEConnection(userID, path))
+
+	// defer sachMeDeferWaleFunctionsReturnKePehleExecuteHoteHainTestingFunction()
+	defer sse.RemoveSSEConnection(userID, sessionID)
+	log.Printf("new sessionID is: %s", sessionID)
+	utils.PrettyPrintMap(shared.GlobalUserSSEConnectionsMap, "GlobalUserSSEConnectionsMap")
+
+	log.Printf("user %s connected to the event stream", user.Username)
+
+	disconnected := r.Context().Done()
+	rc := http.NewResponseController(w)
+
+	// the intent behind this flush is for an initial connection heartbeat
+	rc.Flush()
+
+	channel := shared.GlobalUserSSEConnectionsMap[userID].Sessions[sessionID].EventChannel
+
+	for {
+		select {
+		case <-disconnected:
+			log.Printf("user %s session %s disconnected", userID, sessionID)
+			return
+		case rawMessage := <-channel:
+
+			message := rawMessage
+			event := message.Event
+			rawData := message.Data
+			eventData, err := json.Marshal(rawData)
+			if err != nil {
+				log.Printf("failed marshalling data for event %s to user %s on session %s", event, userID, sessionID)
+				continue
+			}
+			log.Printf("sending event %s data %s to user %s on session %s", event, eventData, userID, sessionID)
+			if n, err := fmt.Fprintf(w, "event: %s\ndata: %s\n\n", event, eventData); err != nil {
+				log.Printf("Unable to write: %s", err.Error())
+			} else {
+				log.Printf("Wrote %d bytes", n)
+			}
+			rc.Flush()
+		}
 	}
 }
 
@@ -221,6 +293,9 @@ func setUpRoutes(db *sql.DB) {
 	http.HandleFunc("/video/", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
 		videoHandler(w, r, db)
 	}))
+	http.HandleFunc("/server-events/", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
+		serverSentEventsHandler(w, r)
+	}))
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 	log.Println("Routes set.")
 }
@@ -230,7 +305,7 @@ func initServer() {
 	utils.LoadEnvVars()
 	database.DB = database.GetDBConn()
 	setUpRoutes(database.DB)
-	utils.ResumeUploadIfAny(database.DB)
+	// utils.ResumeUploadIfAny(database.DB)
 }
 
 func main() {

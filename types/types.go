@@ -34,12 +34,19 @@ type Video struct {
 	Title       string         `json:"title"`
 	Description string         `json:"description"`
 	Thumbnail   sql.NullString `json:"thumbnail"`
+	Status      VideoStatus    `json:"status"`
 }
 
-type Session struct {
-	ID        string    `json:"id"`
-	UserID    string    `json:"user_id"`
-	ExpiresAt time.Time `json:"expires_at"`
+type SessionID string
+type UserID string
+
+type SessionSSEChannelMap struct {
+	Sessions map[SessionID]SSEChannel `json:"Sessions"`
+}
+
+type SSEChannel struct {
+	OriginatingPage string       `json:"originating_page"`
+	EventChannel    chan SSEType `json:"-"`
 }
 
 type User struct {
@@ -56,11 +63,12 @@ type ThumbnailUploadResponse struct {
 	BucketID string `json:"bucketId"`
 }
 
-type ListVideosResponseItem struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Thumbnail   string `json:"thumbnail"`
+type VideoResponseType struct {
+	ID          string      `json:"id"`
+	Title       string      `json:"title"`
+	Description string      `json:"description"`
+	Thumbnail   string      `json:"thumbnail"`
+	Status      VideoStatus `json:"status"`
 }
 
 func NewUser(username, email, password string) (*User, error) {
@@ -109,10 +117,16 @@ func (u *User) GetEmail() string {
 	return u.Email
 }
 
-type UploadStatus int
+type VideoStatus int
 
 const (
-	UploadFailed    UploadStatus = -1
-	UploadPending   UploadStatus = 0
-	UploadCompleted UploadStatus = 1
+	ProcessingFailed    VideoStatus = -1
+	UploadPending       VideoStatus = 0
+	UploadedOnServer    VideoStatus = 1
+	ProcessingCompleted VideoStatus = 2
 )
+
+type SSEType struct {
+	Event string `json:"event"`
+	Data  any    `json:"data"`
+}

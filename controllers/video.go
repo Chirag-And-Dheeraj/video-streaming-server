@@ -24,6 +24,9 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	isFirstChunk := r.Header.Get("first-chunk")
 	fileSize, _ := strconv.Atoi(r.Header.Get("file-size"))
 	user, err := utils.GetUserFromRequest(r)
+	title := r.Header.Get("title")
+
+	userID := UserID(user.ID)
 
 	if err != nil {
 		log.Println(err)
@@ -41,7 +44,6 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	serverFileName := fileName + ".mp4"
 
 	if isFirstChunk == "true" {
-		title := r.Header.Get("title")
 		description := r.Header.Get("description")
 		log.Println("Started receiving chunks for: " + fileName)
 		log.Println("Size of the file received:", fileSize)
@@ -58,7 +60,7 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 						title,
 						description,
 						upload_initiate_time,
-						upload_status,
+						status,
 						delete_flag,
 						user_id
 					) 
@@ -120,7 +122,10 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if fileInfo.Size() == int64(fileSize) {
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("Video received completely and is now being processed."))
-		go utils.PostUploadProcessFile(serverFileName, fileName, tmpFile, db)
+
+		utils.UpdateVideoStatus(db, fileName, UploadedOnServer)
+
+		go utils.PostUploadProcessFile(serverFileName, fileName, title, tmpFile, db, userID)
 
 	} else {
 		w.WriteHeader(http.StatusPartialContent)
@@ -145,13 +150,14 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			video_id,
 			title,
 			description,
-			thumbnail
+			thumbnail,
+			status
 		FROM
 			videos
 		WHERE
-			upload_status=1
-		AND 
 			delete_flag=0
+		AND
+			status <> 0
 		AND
 			user_id=$1
 		ORDER BY
@@ -174,20 +180,21 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	log.Println("Query executed.")
 
-	records := make([]ListVideosResponseItem, 0)
+	records := make([]VideoResponseType, 0)
 
 	for rows.Next() {
 		var id string
 		var title string
 		var description string
 		var thumbnail sql.NullString
+		var status VideoStatus
 
-		err := rows.Scan(&id, &title, &description, &thumbnail)
+		err := rows.Scan(&id, &title, &description, &thumbnail, &status)
 
 		if err != nil {
 			log.Println("Error scanning rows")
 			log.Println(err)
-			http.Error(w, "Error retreiving records", http.StatusInternalServerError)
+			http.Error(w, "Error retrieving records", http.StatusInternalServerError)
 			return
 		}
 
@@ -196,11 +203,12 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			thumbValue = thumbnail.String
 		}
 
-		record := ListVideosResponseItem{
+		record := VideoResponseType{
 			ID:          id,
 			Title:       title,
 			Description: description,
 			Thumbnail:   thumbValue,
+			Status:      status,
 		}
 
 		records = append(records, record)
@@ -210,7 +218,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		log.Println(err)
-		http.Error(w, "Error retreiving records", http.StatusInternalServerError)
+		http.Error(w, "Error retrieving records", http.StatusInternalServerError)
 	} else {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -312,7 +320,7 @@ func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	getSegmentFile := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files/" + fileId + "/view"
 
-	request, err := http.NewRequest("GET", getSegmentFile, nil)
+	request, err := http.NewRequest(http.MethodGet, getSegmentFile, nil)
 
 	if err != nil {
 		log.Println(err)
@@ -363,7 +371,6 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-
 	if videoId == "" {
 		http.Error(w, "Missing 'id' query parameter", http.StatusBadRequest)
 		return
@@ -399,7 +406,7 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	} else {
 		rows, _ := result.RowsAffected()
-		if  rows == 0 {
+		if rows == 0 {
 			http.Error(w, "No record found with given ID", http.StatusNotFound)
 			return
 		}

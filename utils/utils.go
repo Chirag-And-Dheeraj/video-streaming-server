@@ -12,6 +12,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"video-streaming-server/config"
 	"video-streaming-server/database"
 	"video-streaming-server/repositories"
+	"video-streaming-server/shared"
 	"video-streaming-server/types"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -73,20 +75,20 @@ func extractThumbnail(videoPath string, fileName string) (string, error) {
 	}
 }
 
-func uploadThumbnailToAppwrite(folderName string, db *sql.DB) error {
+func uploadThumbnailToAppwrite(folderName string, db *sql.DB) (string, error) {
 	log.Println("Uploading thumbnail of " + folderName + "to Appwrite")
 	files, err := os.ReadDir(fmt.Sprintf("thumbnails/%s", folderName))
 
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 
 	if len(files) == 0 {
 		err = os.Remove("thumbnails/" + folderName)
 		if err != nil {
 			log.Println(err)
-			return err
+			return "", err
 		}
 	}
 
@@ -94,7 +96,7 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) error {
 
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 
 	uploadRequestURL := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files"
@@ -107,35 +109,35 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) error {
 	err = writer.WriteField("fileId", fileId)
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 
 	part, err := writer.CreateFormFile("file", files[0].Name())
 
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 
 	_, err = part.Write(fileToUpload)
 
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 
 	err = writer.Close()
 
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 
-	request, err := http.NewRequest("POST", uploadRequestURL, &requestBody)
+	request, err := http.NewRequest(http.MethodPost, uploadRequestURL, &requestBody)
 	if err != nil {
 		log.Printf("Error creating request")
 		log.Println(err)
-		return err
+		return "", err
 	}
 
 	request.Header.Set("Content-Type", writer.FormDataContentType())
@@ -147,15 +149,17 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) error {
 	response, err := client.Do(request)
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
 	defer response.Body.Close()
+
+	thumbnailURL := ""
 
 	if response.StatusCode != 201 {
 		body, err := io.ReadAll(response.Body)
 		if err != nil {
 			log.Println(err)
-			return err
+			return "", err
 		}
 		log.Println("Response body from Appwrite:" + string(body))
 		log.Println("Status code from Appwrite" + string(response.StatusCode))
@@ -164,14 +168,14 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) error {
 		err := json.NewDecoder(response.Body).Decode(&uploadResponse)
 		if err != nil {
 			log.Printf("Failed to decode Appwrite response: %v\n", err)
-			return err
+			return "", err
 		}
 		log.Printf("File uploaded successfully. ID: %s, BucketID: %s\n",
 			uploadResponse.ID, uploadResponse.BucketID)
 		err = os.Remove("thumbnails/" + folderName + "/" + files[0].Name())
 		if err != nil {
 			log.Println(err)
-			return err
+			return "", err
 		}
 
 		log.Println("Updating thumbnail URL in database record...")
@@ -186,17 +190,17 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) error {
 
 		if err != nil {
 			log.Println(err)
-			return err
+			return "", err
 		}
 
-		thumbnailURL := fmt.Sprintf("https://cloud.appwrite.io/v1/storage/buckets/%s/files/%s/view?project=%s", uploadResponse.BucketID, uploadResponse.ID, config.AppConfig.AppwriteProjectID)
+		thumbnailURL = fmt.Sprintf("https://cloud.appwrite.io/v1/storage/buckets/%s/files/%s/view?project=%s", uploadResponse.BucketID, uploadResponse.ID, config.AppConfig.AppwriteProjectID)
 
 		log.Println("Thumbnail view URL: " + thumbnailURL)
 
 		_, err = updateStatement.Exec(thumbnailURL, folderName)
 		if err != nil {
 			log.Println(err)
-			return err
+			return "", err
 		} else {
 			log.Println("Database record updated.")
 			log.Println("Finished uploading thumbnail", folderName, " :)")
@@ -206,9 +210,9 @@ func uploadThumbnailToAppwrite(folderName string, db *sql.DB) error {
 	err = os.Remove("thumbnails/" + folderName)
 	if err != nil {
 		log.Println(err)
-		return err
+		return "", err
 	}
-	return nil
+	return thumbnailURL, nil
 }
 
 func breakFile(videoPath string, fileName string) (bool, error) {
@@ -282,6 +286,7 @@ func ResumeUploadIfAny(db *sql.DB) {
 }
 
 func uploadToAppwrite(folderName string, db *sql.DB) error {
+	// TODO: Add a deferred cleanup function
 	files, err := os.ReadDir(fmt.Sprintf("segments/%s", folderName))
 
 	if err != nil {
@@ -348,7 +353,7 @@ func uploadToAppwrite(folderName string, db *sql.DB) error {
 			return err
 		}
 
-		request, err := http.NewRequest("POST", uploadRequestURL, &requestBody)
+		request, err := http.NewRequest(http.MethodPost, uploadRequestURL, &requestBody)
 		if err != nil {
 			log.Printf("Error creating request")
 			log.Println(err)
@@ -385,32 +390,6 @@ func uploadToAppwrite(folderName string, db *sql.DB) error {
 		}
 	}
 
-	log.Println("Updating upload status in database record...")
-	updateStatement, err := db.Prepare(`
-	UPDATE
-		videos
-	SET
-		upload_status=$1,
-		upload_end_time=$2
-		WHERE
-		video_id=$3;
-	`)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	_, err = updateStatement.Exec(1, time.Now(), folderName)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	} else {
-		log.Println("Database record updated.")
-		log.Println("Finished uploading", folderName, " :)")
-	}
-
 	if count == len(files)-1 {
 		err = os.Remove("segments/" + folderName)
 		if err != nil {
@@ -440,16 +419,17 @@ func closeVideoFile(tmpFile *os.File) error {
 	return nil
 }
 
-func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.File, db *sql.DB) {
+func PostUploadProcessFile(serverFileName string, fileName string, videoTitle string, tmpFile *os.File, db *sql.DB, userID types.UserID) {
 	log.Println("Received all chunks for: " + serverFileName)
 
 	extractedThumbnail, err := extractThumbnail(("./video/" + serverFileName), fileName)
+	thumbnailURL := ""
 
 	if err != nil {
-		log.Println("Error extractiong thumbnail for video " + fileName)
+		log.Println("Error extracting thumbnail for video " + fileName)
 	} else {
 		log.Println("Extracted thumbnail " + extractedThumbnail)
-		err = uploadThumbnailToAppwrite(fileName, db)
+		thumbnailURL, err = uploadThumbnailToAppwrite(fileName, db)
 		if err != nil {
 			log.Printf("Error uploading thumbnail to Appwrite Storage for video %s : %v", fileName, err)
 		}
@@ -464,24 +444,53 @@ func PostUploadProcessFile(serverFileName string, fileName string, tmpFile *os.F
 		err = closeVideoFile(tmpFile)
 		if err != nil {
 			log.Printf("Error closing temporary file %s: %v", tmpFile.Name(), err)
-			if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
+			if err := UpdateVideoStatus(db, fileName, types.ProcessingFailed); err != nil {
 				log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 			}
+			shared.SendEventToUser(userID, "video_status", types.VideoResponseType{
+				ID:     fileName,
+				Title:  videoTitle,
+				Status: types.ProcessingFailed,
+			})
+			return
 		}
 		err = uploadToAppwrite(fileName, db)
 		if err != nil {
 			log.Printf("Error uploading chunks of %s to Appwrite Storage : %v", fileName, err)
-			if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
+			if err := UpdateVideoStatus(db, fileName, types.ProcessingFailed); err != nil {
 				log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 			}
+
+			shared.SendEventToUser(userID, "video_status", types.VideoResponseType{
+				ID:     fileName,
+				Title:  videoTitle,
+				Status: types.ProcessingFailed,
+			})
+			return
 		} else {
 			log.Printf("Successfully uploaded chunks of %s to Appwrite Storage", fileName)
-		}	
+			if err := UpdateVideoStatus(db, fileName, types.ProcessingCompleted); err != nil {
+				log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
+			}
+			shared.SendEventToUser(userID, "video_status", types.VideoResponseType{
+				ID:        fileName,
+				Title:     videoTitle,
+				Status:    types.ProcessingCompleted,
+				Thumbnail: thumbnailURL,
+			})
+
+		}
 	} else {
 		log.Printf("Error breaking %s into .ts files : %v", fileName, err)
-		if err := updateUploadStatus(db, fileName, types.UploadFailed); err != nil {
+		if err := UpdateVideoStatus(db, fileName, types.ProcessingFailed); err != nil {
 			log.Printf("Error updating upload status for video %s in DB: %v", fileName, err)
 		}
+		shared.SendEventToUser(userID, "video_status", types.VideoResponseType{
+			ID:     fileName,
+			Title:  videoTitle,
+			Status: types.ProcessingFailed,
+		})
+		return
 	}
 }
 
@@ -490,7 +499,7 @@ func GetManifestFile(w http.ResponseWriter, videoId string) ([]byte, error) {
 
 	getManifestFile := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files/" + videoId + "/view"
 
-	request, err := http.NewRequest("GET", getManifestFile, nil)
+	request, err := http.NewRequest(http.MethodGet, getManifestFile, nil)
 
 	if err != nil {
 		return nil, err
@@ -534,6 +543,7 @@ func GetFileId(fileName string) string {
 }
 
 func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId string) {
+	// TODO: Use SSEs here
 	fileBytes, err := GetManifestFile(w, videoId)
 
 	if err != nil {
@@ -553,7 +563,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	thumbnailFileId := GetFileId(thumbnailFileName)
 
-	request, err := http.NewRequest("DELETE", deleteUrl+thumbnailFileId, nil)
+	request, err := http.NewRequest(http.MethodDelete, deleteUrl+thumbnailFileId, nil)
 
 	if err != nil {
 		log.Println(err)
@@ -581,7 +591,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 			fileName := strings.Split(lines[i], ".")[0]
 			fileId := GetFileId(fileName)
 
-			request, err := http.NewRequest("DELETE", deleteUrl+fileId, nil)
+			request, err := http.NewRequest(http.MethodDelete, deleteUrl+fileId, nil)
 
 			if err != nil {
 				log.Println(err)
@@ -608,7 +618,7 @@ func DeleteVideo(w http.ResponseWriter, r *http.Request, db *sql.DB, videoId str
 
 	log.Println("Deleted all .ts files...")
 
-	request, err = http.NewRequest("DELETE", deleteUrl+videoId, nil)
+	request, err = http.NewRequest(http.MethodDelete, deleteUrl+videoId, nil)
 
 	if err != nil {
 		log.Println(err)
@@ -743,15 +753,60 @@ func SendError(w http.ResponseWriter, statusCode int, message string) {
 	json.NewEncoder(w).Encode(map[string]string{"error": message})
 }
 
-func updateUploadStatus(db *sql.DB, videoID string, status types.UploadStatus) error {
+func UpdateVideoStatus(db *sql.DB, videoID string, status types.VideoStatus) error {
 	log.Printf("Updating upload status to %v for video_id %s", status, videoID)
+	switch status {
+	case types.ProcessingCompleted:
+		return handleProcessingCompletedStatus(db, videoID)
+	default:
+		return updateGenericVideoStatus(db, videoID, status)
+	}
+}
 
-	const query = `
-		UPDATE videos
-		SET upload_status = $1
-		WHERE video_id = $2;
-	`
-	result, err := db.Exec(query, status, videoID)
+func handleProcessingCompletedStatus(db *sql.DB, videoID string) error {
+
+	var query string
+	var result sql.Result
+	var err error
+	query = `
+			UPDATE videos
+			SET status = $1, upload_end_time = $2
+			WHERE video_id = $3;
+		`
+	result, err = db.Exec(query, types.ProcessingCompleted, time.Now(), videoID)
+
+	if err != nil {
+		log.Printf("Failed to update upload status for video %s: %v\n", videoID, err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Error checking affected rows for video %s: %v\n", videoID, err)
+		return err
+	}
+
+	if rowsAffected == 0 {
+		log.Printf("No video found with video_id %s to update.\n", videoID)
+		return fmt.Errorf("no record found for video_id: %s", videoID)
+	}
+
+	log.Printf("Successfully updated upload status for video_id %s to %v.\n", videoID, types.ProcessingCompleted)
+	return nil
+}
+
+func updateGenericVideoStatus(db *sql.DB, videoID string, status types.VideoStatus) error {
+
+	var query string
+	var result sql.Result
+	var err error
+	query = `
+			UPDATE videos
+			SET status = $1
+			WHERE video_id = $2;
+		`
+	result, err = db.Exec(query, status, videoID)
+
 	if err != nil {
 		log.Printf("Failed to update upload status for video %s: %v\n", videoID, err)
 		return err
@@ -770,4 +825,26 @@ func updateUploadStatus(db *sql.DB, videoID string, status types.UploadStatus) e
 
 	log.Printf("Successfully updated upload status for video_id %s to %v.\n", videoID, status)
 	return nil
+}
+
+func GetRefererPathFromRequest(r *http.Request) (string, error) {
+	referer := r.Referer()
+	if referer == "" {
+		return "", errors.New("referer header is empty")
+	}
+	u, err := url.Parse(referer)
+	if err != nil {
+		log.Printf("error parsing referer URL '%s': %v", referer, err)
+		return "", err
+	}
+	return u.Path, nil
+}
+
+func PrettyPrintMap(inputMap any, mapName string) {
+	data, err := json.MarshalIndent(inputMap, "", "  ")
+	if err != nil {
+		log.Printf("error marshaling %s map: %v", mapName, err)
+	} else {
+		log.Printf("%s:\n%s", mapName, data)
+	}
 }

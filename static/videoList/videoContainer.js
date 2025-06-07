@@ -2,7 +2,7 @@ class VideoList extends HTMLElement {
   constructor() {
     super();
     this.shadow = this.attachShadow({ mode: "open" });
-    this.viewMode = localStorage.getItem('viewMode') || 'list';
+    this.viewMode = localStorage.getItem("viewMode") || "list";
 
     const style = document.createElement("style");
     style.textContent = `
@@ -65,8 +65,8 @@ class VideoList extends HTMLElement {
 
     this.shadow.appendChild(style);
 
-    this.controlsContainer = document.createElement('div');
-    this.controlsContainer.className = 'controls';
+    this.controlsContainer = document.createElement("div");
+    this.controlsContainer.className = "controls";
     this.shadow.appendChild(this.controlsContainer);
 
     this.itemsContainer = document.createElement("div");
@@ -80,38 +80,44 @@ class VideoList extends HTMLElement {
   }
 
   renderControls() {
-    this.controlsContainer.innerHTML = '';
+    this.controlsContainer.innerHTML = "";
 
-    const listButton = document.createElement('button');
-    listButton.className = `view-toggle-button list ${this.viewMode === 'list' ? 'active' : ''}`;
+    const listButton = document.createElement("button");
+    listButton.className = `view-toggle-button list ${this.viewMode === "list" ? "active" : ""}`;
     listButton.title = "Switch to List View";
-    listButton.textContent = 'List';
-    listButton.addEventListener('click', () => this.setViewMode('list'));
+    listButton.textContent = "List";
+    listButton.addEventListener("click", () => this.setViewMode("list"));
     this.controlsContainer.appendChild(listButton);
 
-    const gridButton = document.createElement('button');
-    gridButton.className = `view-toggle-button grid ${this.viewMode === 'grid' ? 'active' : ''}`;
+    const gridButton = document.createElement("button");
+    gridButton.className = `view-toggle-button grid ${this.viewMode === "grid" ? "active" : ""}`;
     gridButton.title = "Switch to Grid View";
-    gridButton.textContent = 'Grid';
-    gridButton.addEventListener('click', () => this.setViewMode('grid'));
+    gridButton.textContent = "Grid";
+    gridButton.addEventListener("click", () => this.setViewMode("grid"));
     this.controlsContainer.appendChild(gridButton);
   }
 
   setViewMode(mode) {
-    if (this.viewMode === mode) return;
+    if (this.viewMode === mode) {
+      return;
+    }
 
     this.viewMode = mode;
-    localStorage.setItem('viewMode', mode);
+    localStorage.setItem("viewMode", mode);
 
-    this.itemsContainer.classList.remove('list-view', 'grid-view');
+    this.itemsContainer.classList.remove("list-view", "grid-view");
     this.itemsContainer.classList.add(`${mode}-view`);
 
-    this.shadow.querySelector('.view-toggle-button.list').classList.toggle('active', mode === 'list');
-    this.shadow.querySelector('.view-toggle-button.grid').classList.toggle('active', mode === 'grid');
+    this.shadow
+      .querySelector(".view-toggle-button.list")
+      .classList.toggle("active", mode === "list");
+    this.shadow
+      .querySelector(".view-toggle-button.grid")
+      .classList.toggle("active", mode === "grid");
 
-    this.itemsContainer.querySelectorAll('video-item').forEach(item => {
-        item.classList.remove('list-mode-item', 'grid-mode-item');
-        item.classList.add(mode === 'grid' ? 'grid-mode-item' : 'list-mode-item');
+    this.itemsContainer.querySelectorAll("video-item").forEach((item) => {
+      item.classList.remove("list-mode-item", "grid-mode-item");
+      item.classList.add(mode === "grid" ? "grid-mode-item" : "list-mode-item");
     });
   }
 
@@ -120,7 +126,7 @@ class VideoList extends HTMLElement {
       this.render(true);
       const response = await fetch(`${window.ENV.API_URL}/video`);
       if (!response.ok) {
-         throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
       const videos = await response.json();
       this.videos = videos;
@@ -134,26 +140,29 @@ class VideoList extends HTMLElement {
 
   render(loading = false) {
     const container = this.itemsContainer;
-    container.innerHTML = '';
+    container.innerHTML = "";
 
     if (loading) {
       container.innerHTML = '<div class="loading">Loading videos...</div>';
     } else if (this.error) {
       container.innerHTML = `<div class="error">Failed to load videos: ${this.error}</div>`;
     } else if (this.videos && this.videos.length > 0) {
-      this.videos.forEach(video => {
-        const videoItem = document.createElement('video-item');
-        videoItem.setAttribute('name', video.title || 'Untitled Video');
-        videoItem.setAttribute('description', video.description || '');
-        videoItem.setAttribute('thumbnail', video.thumbnail || '');
-        videoItem.setAttribute('video-id', video.id);
+      this.videos.forEach((video) => {
+        const videoItem = document.createElement("video-item");
+        videoItem.setAttribute("name", video.title || "Untitled Video");
+        videoItem.setAttribute("description", video.description || "");
+        videoItem.setAttribute("thumbnail", video.thumbnail || "");
+        videoItem.setAttribute("video-id", video.id);
 
-        videoItem.classList.add(this.viewMode === 'grid' ? 'grid-mode-item' : 'list-mode-item');
+        // TODO: status should be validated (keep a set of allowed statuses, I guess?)
+        videoItem.setAttribute("status", video.status); // Pass the status here
+
+        videoItem.classList.add(this.viewMode === "grid" ? "grid-mode-item" : "list-mode-item");
 
         container.appendChild(videoItem);
       });
     } else if (this.videos) {
-        container.innerHTML = '<div class="loading">No videos found. Upload some!</div>';
+      container.innerHTML = '<div class="loading">No videos found. Upload some!</div>';
     }
   }
 }
