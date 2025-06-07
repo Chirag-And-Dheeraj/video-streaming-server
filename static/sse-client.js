@@ -18,7 +18,7 @@ eventSource.addEventListener("video_status", (event) => {
     const data = JSON.parse(event.data);
     console.log("Update event received:", data);
 
-    const { id: videoId, status: videoStatus, title = "Unknown Video", thumbnail } = data;
+    const { id: videoId, status: videoStatus, title: videoTitle = "Unknown Video", thumbnail } = data;
 
     // First, get the video-container element
     const videoContainer = document.querySelector("video-container");

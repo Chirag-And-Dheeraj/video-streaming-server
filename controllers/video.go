@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 	"video-streaming-server/config"
-	"video-streaming-server/types"
 	. "video-streaming-server/types"
 	"video-streaming-server/utils"
 )
@@ -123,11 +122,8 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if fileInfo.Size() == int64(fileSize) {
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("Video received completely and is now being processed."))
-		// the function below needs a place where it can send the processing status
-		// so we use the user ID to get all open sessions of that user
-		// and lastly use a for loop to send all the data to each channel for that user.
 
-		utils.UpdateVideoStatus(db, fileName, types.UploadedOnServer)
+		utils.UpdateVideoStatus(db, fileName, UploadedOnServer)
 
 		go utils.PostUploadProcessFile(serverFileName, fileName, title, tmpFile, db, userID)
 
@@ -191,7 +187,7 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		var title string
 		var description string
 		var thumbnail sql.NullString
-		var status types.VideoStatus
+		var status VideoStatus
 
 		err := rows.Scan(&id, &title, &description, &thumbnail, &status)
 

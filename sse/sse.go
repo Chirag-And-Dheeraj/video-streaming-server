@@ -9,18 +9,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// type SessionID string
-// type UserID string
-
-// type SSEConnection struct {
-// 	Sessions map[SessionID]SSEChannel `json:"-"`
-// }
-
-// type SSEChannel struct {
-// 	OriginatingPage string      `json:"originating_page"`
-// 	EventChannel    chan string `json:"-"`
-// }
-
 func CreateNewSSEChannel(refererPath string, bufferSize int) types.SSEChannel {
 	return types.SSEChannel{
 		OriginatingPage: refererPath,
