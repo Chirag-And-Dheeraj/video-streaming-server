@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"video-streaming-server/config"
 
 	_ "github.com/lib/pq"
@@ -60,12 +61,12 @@ func GetDBConn() *sql.DB {
 	if DB == nil {
 		dbConfig, err := newDBConfig()
 		if err != nil {
-			log.Fatalf("Failed to load database config: %v", err)
+			slog.Error("Failed to load database config", "error", err)
 		}
 		DB, err = Connect(dbConfig)
 
 		if err != nil {
-			log.Fatalf("Failed to connect to database: %v", err)
+			slog.Error("Failed to connect to database", "error", err)
 		}
 	}
 	return DB
