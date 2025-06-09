@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strings"
 )
@@ -106,6 +107,6 @@ func LoadConfig(envFile string) error {
 
 	AppConfig = config
 
-	log.Println("Configuration loaded successfully.")
+	slog.Info("Configuration loaded successfully.")
 	return nil
 }
