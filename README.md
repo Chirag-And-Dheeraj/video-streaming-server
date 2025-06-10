@@ -6,6 +6,10 @@ We launched [Dekho](https://peerlist.io/dheerajlalwani/project/dekho) on [Peerli
 
 ![Project of the week](/documentation/static/Winner-Medal-Weekly.svg) ![Project of the week](/documentation/static/Winner-Medal-Monthly.svg)
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Chirag-and-Dheeraj/video-streaming-server&type=Timeline)](https://www.star-history.com/#Chirag-and-Dheeraj/video-streaming-server&Timeline)
+
 ## Overview
 
 Dekho is a research and study project aimed at understanding and learning about audio and video streaming. Our primary focus was on implementing the [HLS (HTTP Live Streaming)](https://developer.apple.com/streaming) protocol to build an on-demand video streaming server.
