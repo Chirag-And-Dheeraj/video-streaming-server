@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -15,7 +14,7 @@ import (
 	"video-streaming-server/config"
 	"video-streaming-server/controllers"
 	"video-streaming-server/database"
-	"video-streaming-server/middleware"
+	mw "video-streaming-server/middleware"
 	"video-streaming-server/repositories"
 	"video-streaming-server/services"
 	"video-streaming-server/shared"
@@ -31,80 +30,62 @@ import (
 	/video/[id]/stream/[filename] - Get The Segment of Video
 */
 
-func getRequestLogger(r *http.Request, logger *slog.Logger) (*slog.Logger, error) {
-	user, err := utils.GetUserFromRequest(r)
+// func getRequestLogger(r *http.Request, logger *slog.Logger) (*slog.Logger, error) {
+// 	user, err := utils.GetUserFromRequest(r)
+// 	if err != nil {
+// 		logger.Error("Failed to get user from request", "error", err)
+// 		return nil, err
+// 	}
+
+// 	requestGroup := slog.Group(
+// 		"request",
+// 		slog.String("method", r.Method),
+// 		slog.String("path", r.URL.Path),
+// 		slog.String("remote_addr", r.RemoteAddr),
+// 		slog.String("user", user.ID),
+// 	)
+
+// 	return logger.With(requestGroup), nil
+// }
+
+func videoHandler(w http.ResponseWriter, r *http.Request) {
+	path := r.URL.Path
+	method := r.Method
+	db, err := database.GetDBConn()
+
 	if err != nil {
-		logger.Error("Failed to get user from request", "error", err)
-		return nil, err
-	}
-
-	requestGroup := slog.Group(
-		"request",
-		slog.String("method", r.Method),
-		slog.String("path", r.URL.Path),
-		slog.String("remote_addr", r.RemoteAddr),
-		slog.String("user", user.ID),
-	)
-
-	return logger.With(requestGroup), nil
-}
-
-func videoHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, logger *slog.Logger) {
-	videoLogger, err := getRequestLogger(r, logger)
-	if err != nil {
+		utils.Logger.Error("error getting database connection", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-
-	videoLogger.Info("Received request for video endpoint.")
-
-	path := r.URL.Path
-	method := r.Method
 
 	if method == http.MethodPost {
 		controllers.UploadVideo(w, r, db)
 	} else if method == http.MethodGet {
 		if path == "/video/" {
-			videoLogger.Info("Get all video details")
 			controllers.GetVideos(w, r, db)
 		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
-			videoLogger.Info("Get video details")
 			controllers.GetVideo(w, r, db)
 		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/?$", path); err == nil && matched {
-			videoLogger.Info("Manifest Request")
 			controllers.ManifestFileHandler(w, r, db)
 		} else if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/stream/[a-zA-B0-9_-]+.ts/?$", r.URL.Path); err == nil && matched {
-			videoLogger.Info("Segment Request")
 			controllers.TSFileHandler(w, r, db)
 		} else {
 			response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
 			http.Error(w, response, http.StatusNotFound)
 		}
 	} else if method == http.MethodDelete {
-		videoLogger.Info("Delete video details")
 		if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
 			controllers.DeleteHandler(w, r, db)
 		}
 	} else if method == http.MethodPatch {
-		videoLogger.Info("Update video details")
 		if matched, err := regexp.MatchString("^/video/[a-zA-B0-9-]+/?$", path); err == nil && matched {
 			controllers.UpdateHandler(w, r, db)
 		}
 	}
 }
 
-type HomePageData struct {
-	IsLoggedIn bool
-	Username   string
-}
-
-func homePageHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger) {
-	homePageLogger, err := getRequestLogger(r, logger)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	homePageLogger.Info("Received request for home page.")
+func homePageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.URL.Path != "/" {
 		response := fmt.Sprintf("Error: handler for %s not found", html.EscapeString(r.URL.Path))
@@ -128,19 +109,20 @@ func homePageHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger
 		username = claims["username"].(string)
 	}
 
-	tmpl.Execute(w, HomePageData{
+	tmpl.Execute(w, types.HomePageData{
 		IsLoggedIn: isLoggedIn,
 		Username:   username,
 	})
 }
 
-func registerPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, logger *slog.Logger) {
-	registerLogger, err := getRequestLogger(r, logger)
+func registerPageHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := database.GetDBConn()
+
 	if err != nil {
+		slog.Error("error getting database connection", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	registerLogger.Info("Received request for register page.")
 
 	if r.Method == http.MethodPost {
 		userRepository := repositories.NewUserRepository(db)
@@ -152,13 +134,14 @@ func registerPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, log
 	}
 }
 
-func loginPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, logger *slog.Logger) {
-	loginLogger, err := getRequestLogger(r, logger)
+func loginPageHandler(w http.ResponseWriter, r *http.Request) {
+	db, err := database.GetDBConn()
+
 	if err != nil {
+		utils.Logger.Error("error getting database connection", "error", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
-	loginLogger.Info("Received request for login page.")
 
 	if r.Method == http.MethodPost {
 		userRepository := repositories.NewUserRepository(db)
@@ -170,28 +153,15 @@ func loginPageHandler(w http.ResponseWriter, r *http.Request, db *sql.DB, logger
 	}
 }
 
-func uploadPageHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger) {
-	uploadLogger, err := getRequestLogger(r, logger)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	uploadLogger.Info("Received request for upload page.")
+func uploadPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
-		log.Println("GET: " + r.URL.Path)
 		p := "./client/upload.html"
 		http.ServeFile(w, r, p)
 	}
 }
 
-func listPageHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger) {
-	listLogger, err := getRequestLogger(r, logger)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	listLogger.Info("Received request for list page.")
+func listPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
@@ -200,13 +170,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger
 	}
 }
 
-func watchPageHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger) {
-	watchLogger, err := getRequestLogger(r, logger)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	watchLogger.Info("Received request for watch page.")
+func watchPageHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		log.Println("GET: " + r.URL.Path)
@@ -215,13 +179,7 @@ func watchPageHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logge
 	}
 }
 
-func configHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger) {
-	configLogger, err := getRequestLogger(r, logger)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	configLogger.Info("Received request for config endpoint.")
+func configHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -247,19 +205,13 @@ func configHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	err = json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
 		http.Error(w, "Error encoding response", http.StatusInternalServerError)
 	}
 }
 
-func logoutHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger) {
-	logoutLogger, err := getRequestLogger(r, logger)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	logoutLogger.Info("Received request for logout.")
+func logoutHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodPost {
 		http.SetCookie(w, &http.Cookie{
@@ -275,13 +227,7 @@ func logoutHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger) 
 	}
 }
 
-func serverSentEventsHandler(w http.ResponseWriter, r *http.Request, logger *slog.Logger) {
-	sseLogger, err := getRequestLogger(r, logger)
-	if err != nil {
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
-	}
-	sseLogger.Info("Received request for server-sent events.")
+func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: talk to Jaden about security review
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -350,52 +296,26 @@ func serverSentEventsHandler(w http.ResponseWriter, r *http.Request, logger *slo
 	}
 }
 
-func setUpRoutes(db *sql.DB, logger *slog.Logger) {
-	slog.Info("Setting up routes...")
+func setUpRoutes() {
+	log.Println("Setting up routes...")
+	http.HandleFunc("/", utils.Chain(homePageHandler, mw.Logging))
+	http.HandleFunc("/register", utils.Chain(registerPageHandler, mw.Logging))
+	http.HandleFunc("/login", utils.Chain(loginPageHandler, mw.Logging))
+	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/upload", utils.Chain(uploadPageHandler, mw.Logging, mw.AuthRequired))
+	http.HandleFunc("/list", utils.Chain(listPageHandler, mw.Logging, mw.AuthRequired))
+	http.HandleFunc("/watch", utils.Chain(watchPageHandler, mw.Logging, mw.AuthRequired))
+	http.HandleFunc("/config", configHandler)
+	http.HandleFunc("/video/", utils.Chain(videoHandler, mw.Logging, mw.AuthRequired))
+	http.HandleFunc("/server-events/", utils.Chain(serverSentEventsHandler, mw.Logging, mw.AuthRequired))
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		homePageHandler(w, r, logger)
-	})
-	http.HandleFunc("/register", func(w http.ResponseWriter, r *http.Request) {
-		registerPageHandler(w, r, db, logger)
-	})
-	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		loginPageHandler(w, r, db, logger)
-	})
-	http.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
-		logoutHandler(w, r, logger)
-	})
-	http.HandleFunc("/upload", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
-		uploadPageHandler(w, r, logger)
-	}))
-	http.HandleFunc("/list", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
-		listPageHandler(w, r, logger)
-	}))
-	http.HandleFunc("/watch", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
-		watchPageHandler(w, r, logger)
-	}))
-	http.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
-		configHandler(w, r, logger)
-	})
-	http.HandleFunc("/video/", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
-		videoHandler(w, r, db, logger)
-	}))
-	http.HandleFunc("/server-events/", middleware.AuthRequired(func(w http.ResponseWriter, r *http.Request) {
-		serverSentEventsHandler(w, r, logger)
-	}))
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	slog.Info("Routes set.")
-}
-
-func initServer(logger *slog.Logger) {
-	slog.Info("Initializing server...")
-	utils.LoadEnvVars()
-	database.DB = database.GetDBConn()
-	setUpRoutes(database.DB, logger)
-	// utils.ResumeUploadIfAny(database.DB)
+	log.Println("Routes set.")
 }
 
 func main() {
+
+	// TODO:
 	// file, err := os.OpenFile("server.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	// if err != nil {
 	// 	panic(err)
@@ -405,23 +325,18 @@ func main() {
 
 	// w := io.MultiWriter(os.Stdout, file)
 
-	handlerOpts := &slog.HandlerOptions{
-		Level:     slog.LevelDebug,
-		AddSource: true,
-	}
-	logger := slog.New(slog.NewTextHandler(os.Stderr, handlerOpts))
-	slog.SetDefault(logger)
-
 	if err := config.LoadConfig(".env"); err != nil {
 		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
 
-	initServer(logger)
+	utils.LoadEnvVars()
+	utils.InitLogger()
+	setUpRoutes()
 	slog.Info(
-		"Server is listening on",
-		slog.String("address", config.AppConfig.Addr),
-		slog.String("port", config.AppConfig.Port),
+		"Dekho server is listening on",
+		"address", config.AppConfig.Addr,
+		"port", config.AppConfig.Port,
 	)
 	log.Fatal(http.ListenAndServe(fmt.Sprintf("%s:%s", config.AppConfig.Addr, config.AppConfig.Port), nil))
 }

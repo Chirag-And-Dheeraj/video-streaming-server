@@ -29,7 +29,6 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID := UserID(user.ID)
 
 	if err != nil {
-		log.Println(err)
 		http.Error(w, "User not logged in.", http.StatusUnauthorized)
 		return
 	}
@@ -45,12 +44,6 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if isFirstChunk == "true" {
 		description := r.Header.Get("description")
-		log.Println("Started receiving chunks for: " + fileName)
-		log.Println("Size of the file received:", fileSize)
-		log.Println("Title: ", title)
-		log.Println("Description: ", description)
-		log.Println("Creating a database record...")
-		log.Println("User is: ", user.ID)
 
 		insertStatement, err := db.Prepare(`
 			INSERT INTO 
@@ -69,18 +62,19 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		`)
 
 		if err != nil {
-			log.Fatal(err)
+			http.Error(w, "Error processing file", http.StatusInternalServerError)
+			return
 		}
 
 		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0, 0, user.ID)
 
 		if err != nil {
-			log.Println(err)
 			http.Error(w, "Error processing file", http.StatusInternalServerError)
 			return
-		} else {
-			log.Println("Database record created.")
-		}
+		} 
+		// else {
+		// 	videoLogger.Info("New video record created in the database")
+		// }
 	}
 
 	d, _ := io.ReadAll(r.Body)
@@ -90,14 +84,12 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if isFirstChunk == "true" {
 		tmpFile, err = os.Create("./video/" + serverFileName)
 		if err != nil {
-			log.Println("Error creating a temp file on the server:", err)
 			http.Error(w, "Error processing file", http.StatusInternalServerError)
 			return
 		}
 	} else {
 		tmpFile, err = os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
-			log.Println("Error opening the temp file on the server for appending chunks:", err)
 			http.Error(w, "Error processing file", http.StatusInternalServerError)
 			return
 		}
@@ -106,7 +98,6 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	_, err = tmpFile.Write(d)
 
 	if err != nil {
-		log.Println("Error appending chunks to file:", err)
 		http.Error(w, "Error processing file", http.StatusInternalServerError)
 		return
 	}
@@ -114,7 +105,6 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	fileInfo, err := tmpFile.Stat()
 
 	if err != nil {
-		log.Println("Error getting file info:", err)
 		http.Error(w, "Error processing file", http.StatusInternalServerError)
 		return
 	}
