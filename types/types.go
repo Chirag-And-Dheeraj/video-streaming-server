@@ -7,6 +7,11 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type HomePageData struct {
+	IsLoggedIn bool
+	Username   string
+}
+
 type UpdateRequest struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`

@@ -56,17 +56,17 @@ func Connect(config *DBConfig) (*sql.DB, error) {
 	return db, nil
 }
 
-func GetDBConn() *sql.DB {
+func GetDBConn() (*sql.DB, error) {
 	if DB == nil {
 		dbConfig, err := newDBConfig()
 		if err != nil {
-			log.Fatalf("Failed to load database config: %v", err)
+			return nil, fmt.Errorf("failed to create database config: %w", err)
 		}
 		DB, err = Connect(dbConfig)
 
 		if err != nil {
-			log.Fatalf("Failed to connect to database: %v", err)
+			return nil, fmt.Errorf("failed to connect to database: %w", err)
 		}
 	}
-	return DB
+	return DB, nil
 }

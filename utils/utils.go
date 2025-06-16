@@ -706,7 +706,7 @@ func GetUserFromRequest(r *http.Request) (*types.User, error) {
 	if err != nil {
 		return nil, err
 	}
-	db := database.GetDBConn()
+	db, _ := database.GetDBConn()
 	userRepository := repositories.NewUserRepository(db)
 	token, err := VerifyToken(authToken.Value)
 	if err != nil {
@@ -847,4 +847,11 @@ func PrettyPrintMap(inputMap any, mapName string) {
 	} else {
 		log.Printf("%s:\n%s", mapName, data)
 	}
+}
+
+func Chain(h http.HandlerFunc, middlewares ...func(http.HandlerFunc) http.HandlerFunc) http.HandlerFunc {
+	for i := len(middlewares) - 1; i >= 0; i-- {
+		h = middlewares[i](h)
+	}
+	return h
 }
