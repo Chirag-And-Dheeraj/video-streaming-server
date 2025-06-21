@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"video-streaming-server/shared/logger"
 )
 
 type FileType struct {
@@ -114,6 +113,6 @@ func LoadConfig(envFile string) error {
 	}
 
 	AppConfig = config
-	logger.Log.Info("Configuration loaded successfully")
+	slog.Info("Configuration loaded successfully")
 	return nil
 }
