@@ -1,12 +1,11 @@
 package controllers
 
 import (
-	"log"
+	"encoding/json"
 	"net/http"
 	"time"
-
-	"encoding/json"
 	"video-streaming-server/services"
+	"video-streaming-server/shared/logger"
 	"video-streaming-server/utils"
 
 	"github.com/go-playground/validator"
@@ -36,7 +35,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, userService services.U
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		log.Println(err)
+		logger.Log.Error("failed to decode request body", "error", err)
 		utils.SendError(w, http.StatusBadRequest, "Invalid Request Body")
 		return
 	}
@@ -44,7 +43,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, userService services.U
 	validate := validator.New()
 	err = validate.Struct(requestBody)
 	if err != nil {
-		log.Println(err)
+		logger.Log.Error("validation failed", "error", err)
 		utils.SendError(w, http.StatusBadRequest, "Validation failed")
 		return
 	}
@@ -53,16 +52,20 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, userService services.U
 	if err != nil {
 		switch err.Error() {
 		case "email already exists":
+			logger.Log.Info("registration failed - email exists", "email", requestBody.Email)
 			utils.SendError(w, http.StatusConflict, "Email already exists")
 		case "username already exists":
+			logger.Log.Info("registration failed - username exists", "username", requestBody.Username)
 			utils.SendError(w, http.StatusConflict, "Username already taken")
 		default:
-			log.Fatal(err)
+			logger.Log.Error("registration failed - internal error", "error", err)
 			utils.SendError(w, http.StatusInternalServerError, "Internal server error")
 		}
-
 		return
 	}
+
+	logger.Log.Info("user registered successfully",
+		"userId", newUser.ID)
 
 	response := RegisterResponse{
 		ID:        newUser.ID,
@@ -72,8 +75,8 @@ func RegisterUser(w http.ResponseWriter, r *http.Request, userService services.U
 	}
 
 	jsonResponse, err := json.Marshal(response)
-
 	if err != nil {
+		logger.Log.Error("failed to marshal response", "error", err)
 		utils.SendError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
@@ -88,7 +91,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request, userService services.User
 
 	err := json.NewDecoder(r.Body).Decode(&requestBody)
 	if err != nil {
-		log.Println(err)
+		logger.Log.Error("failed to decode request body", "error", err)
 		utils.SendError(w, http.StatusBadRequest, "Invalid Request Body")
 		return
 	}
@@ -96,7 +99,7 @@ func LoginUser(w http.ResponseWriter, r *http.Request, userService services.User
 	validate := validator.New()
 	err = validate.Struct(requestBody)
 	if err != nil {
-		log.Println(err)
+		logger.Log.Error("validation failed", "error", err)
 		utils.SendError(w, http.StatusBadRequest, "Invalid Request Body")
 		return
 	}
@@ -105,10 +108,17 @@ func LoginUser(w http.ResponseWriter, r *http.Request, userService services.User
 	if err != nil {
 		switch err.Error() {
 		case "invalid credentials":
+			logger.Log.Info("login failed - invalid credentials",
+				"email", requestBody.Email,
+				"error", err.Error())
 			utils.SendError(w, http.StatusUnauthorized, "Invalid email or password")
 		case "user does not exist":
+			logger.Log.Info("login failed - user does not exist",
+				"email", requestBody.Email,
+				"error", err.Error())
 			utils.SendError(w, http.StatusNotFound, "User does not exist")
 		default:
+			logger.Log.Error("login failed - internal error", "error", err)
 			utils.SendError(w, http.StatusInternalServerError, "Internal server error")
 		}
 		return
@@ -117,9 +127,14 @@ func LoginUser(w http.ResponseWriter, r *http.Request, userService services.User
 	// Generate JWT token
 	token, err := utils.GenerateJWT(user.ID, user.Username)
 	if err != nil {
-		utils.SendError(w, http.StatusInternalServerError, "Failed to generate token")
+		logger.Log.Error("failed to generate JWT", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
+
+	logger.Log.Info("user logged in successfully",
+		"userId", user.ID,
+		"username", user.Username)
 
 	// Set the JWT token in the response
 	http.SetCookie(w, &http.Cookie{

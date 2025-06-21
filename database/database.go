@@ -3,7 +3,6 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"video-streaming-server/config"
 
 	_ "github.com/lib/pq"
@@ -35,7 +34,7 @@ func newDBConfig() (*DBConfig, error) {
 
 // Connect establishes a connection to the PostgreSQL database
 func Connect(config *DBConfig) (*sql.DB, error) {
-	log.Println("Initializing PostgreSQL database...")
+	// log.Info("initializing PostgreSQL database")
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		config.Host, config.Port, config.User, config.Password, config.Name, config.SSLMode)
@@ -50,9 +49,8 @@ func Connect(config *DBConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	log.Println("Database connection established.")
-
-	log.Println("Database initialized.")
+	// log.Info("database connection established")
+	// log.Info("database initialized")
 	return db, nil
 }
 

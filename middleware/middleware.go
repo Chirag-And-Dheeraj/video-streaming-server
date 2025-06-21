@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"video-streaming-server/shared/logger"
 	"video-streaming-server/utils"
 )
 
@@ -36,7 +37,7 @@ func Logging(next http.HandlerFunc) http.HandlerFunc {
 			userID = "anonymous"
 		}
 
-		utils.Logger.Info("http request",
+		logger.Log.Info("http request",
 			"method", r.Method,
 			"url", r.URL.String(),
 			"user", userID,

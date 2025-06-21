@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"strconv"
 )
 
 type FileType struct {
@@ -35,7 +36,7 @@ type Config struct {
 	SSLMode                string
 	JWTSecretKey           string
 	FileSizeLimit          string
-	Debug                  string
+	Debug                  bool
 }
 
 var AppConfig *Config
@@ -80,6 +81,11 @@ func LoadConfig(envFile string) error {
 		return err
 	}
 
+	debug, err := strconv.ParseBool(os.Getenv("DEBUG"))
+	if err != nil {
+		return fmt.Errorf("error parsing DEBUG environment variable: %w", err)
+	}
+
 	config := &Config{
 		RootPath:               os.Getenv("ROOT_PATH"),
 		AppwriteBucketID:       os.Getenv("BUCKET_ID"),
@@ -96,7 +102,7 @@ func LoadConfig(envFile string) error {
 		SSLMode:                os.Getenv("SSL_MODE"),
 		JWTSecretKey:           os.Getenv("JWT_SECRET_KEY"),
 		FileSizeLimit:          os.Getenv("FILE_SIZE_LIMIT"),
-		Debug:                  os.Getenv("DEBUG"),
+		Debug:                  debug,
 	}
 
 	if config.JWTSecretKey == "" {
@@ -107,7 +113,5 @@ func LoadConfig(envFile string) error {
 	}
 
 	AppConfig = config
-
-	slog.Info("Configuration loaded successfully.")
 	return nil
 }

@@ -1,18 +1,16 @@
 package controllers
 
 import (
-	"crypto/sha1"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"time"
 	"video-streaming-server/config"
+	"video-streaming-server/shared/logger"
 	. "video-streaming-server/types"
 	"video-streaming-server/utils"
 )
@@ -29,7 +27,8 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID := UserID(user.ID)
 
 	if err != nil {
-		http.Error(w, "User not logged in.", http.StatusUnauthorized)
+		logger.Log.Warn("failed to get user from request", "error", err)
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 	sizeLimit, _ := strconv.Atoi(config.AppConfig.FileSizeLimit)
@@ -62,19 +61,18 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		`)
 
 		if err != nil {
-			http.Error(w, "Error processing file", http.StatusInternalServerError)
+			logger.Log.Error("failed to prepare insert statement", "error", err)
+			utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 
 		_, err = insertStatement.Exec(fileName, title, description, time.Now(), 0, 0, user.ID)
 
 		if err != nil {
-			http.Error(w, "Error processing file", http.StatusInternalServerError)
+			logger.Log.Error("failed to execute insert statement", "error", err)
+			utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
-		} 
-		// else {
-		// 	videoLogger.Info("New video record created in the database")
-		// }
+		}
 	}
 
 	d, _ := io.ReadAll(r.Body)
@@ -84,13 +82,15 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if isFirstChunk == "true" {
 		tmpFile, err = os.Create("./video/" + serverFileName)
 		if err != nil {
-			http.Error(w, "Error processing file", http.StatusInternalServerError)
+			logger.Log.Error("failed to create file", "error", err)
+			utils.SendError(w, http.StatusInternalServerError, "Error processing file")
 			return
 		}
 	} else {
 		tmpFile, err = os.OpenFile("./video/"+serverFileName, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
 		if err != nil {
-			http.Error(w, "Error processing file", http.StatusInternalServerError)
+			logger.Log.Error("failed to open file for appending", "error", err)
+			utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 	}
@@ -98,14 +98,16 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	_, err = tmpFile.Write(d)
 
 	if err != nil {
-		http.Error(w, "Error processing file", http.StatusInternalServerError)
+		logger.Log.Error("failed to write to file", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 
 	fileInfo, err := tmpFile.Stat()
 
 	if err != nil {
-		http.Error(w, "Error processing file", http.StatusInternalServerError)
+		logger.Log.Error("failed to get file info", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 
@@ -113,7 +115,12 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		w.WriteHeader(http.StatusCreated)
 		w.Write([]byte("Video received completely and is now being processed."))
 
-		utils.UpdateVideoStatus(db, fileName, UploadedOnServer)
+		err := utils.UpdateVideoStatus(db, fileName, UploadedOnServer)
+		if err != nil {
+			logger.Log.Error("failed to update video status", "error", err)
+			utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
+			return
+		}
 
 		go utils.PostUploadProcessFile(serverFileName, fileName, title, tmpFile, db, userID)
 
@@ -126,12 +133,11 @@ func UploadVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 // @desc Get All Videos
 // @route GET /video
 func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	log.Println("Querying the database now for a list of videos...")
 	user, err := utils.GetUserFromRequest(r)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "User not logged in.", http.StatusUnauthorized)
+		logger.Log.Warn("failed to get user from request", "error", err)
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -155,20 +161,20 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	`)
 
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Error("failed to prepare query", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 
 	rows, err := getUserVideosQuery.Query(user.ID)
 
 	if err != nil {
-		log.Println("Error running select query for all video records.")
-		http.Error(w, "Error retrieving videos", http.StatusInternalServerError)
+		logger.Log.Error("failed to execute query", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 
 	defer rows.Close()
-
-	log.Println("Query executed.")
 
 	records := make([]VideoResponseType, 0)
 
@@ -182,9 +188,8 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		err := rows.Scan(&id, &title, &description, &thumbnail, &status)
 
 		if err != nil {
-			log.Println("Error scanning rows")
-			log.Println(err)
-			http.Error(w, "Error retrieving records", http.StatusInternalServerError)
+			logger.Log.Error("failed to scan row", "error", err)
+			utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 			return
 		}
 
@@ -207,26 +212,26 @@ func GetVideos(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	recordsJSON, err := json.Marshal(records)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error retrieving records", http.StatusInternalServerError)
-	} else {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(recordsJSON))
+		logger.Log.Error("failed to marshal records", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(recordsJSON))
 }
 
 // @desc Get a Video
 // @route GET /video/[id]
 func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoId := r.URL.Path[len("/video/"):]
-	log.Println("Details of " + videoId + " requested.")
 
 	user, err := utils.GetUserFromRequest(r)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "User not logged in.", http.StatusUnauthorized)
+		logger.Log.Error("failed to get user from request", "error", err)
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -242,8 +247,9 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	`)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error retrieving record", http.StatusInternalServerError)
+		logger.Log.Error("failed to prepare query", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 
 	defer detailsQuery.Close()
@@ -253,12 +259,12 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Println(err)
-			http.Error(w, "Video record not found", http.StatusNotFound)
+			logger.Log.Error("video not found", "videoId", videoId, "userId", user.ID)
+			utils.SendError(w, http.StatusNotFound, "Video not found")
 			return
 		}
-		log.Println(err)
-		http.Error(w, "Error retrieving record", http.StatusInternalServerError)
+		logger.Log.Error("failed to query video details", "error", err, "videoId", videoId)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 
@@ -270,13 +276,14 @@ func GetVideo(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoDetailsJSON, err := json.Marshal(videoDetails)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
-	} else {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(videoDetailsJSON))
+		logger.Log.Error("failed to marshal response", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(videoDetailsJSON))
 }
 
 // @desc Get Manifest File
@@ -287,8 +294,8 @@ func ManifestFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	file, err := utils.GetManifestFile(w, videoId)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error retrieving video", http.StatusInternalServerError)
+		logger.Log.Error("failed to retrieve manifest file", "videoId", videoId, "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Error retrieving video")
 	} else {
 		w.Header().Set("Content-Type", "application/x-mpegURL")
 		w.WriteHeader(http.StatusOK)
@@ -300,21 +307,17 @@ func ManifestFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 // @route GET /video/[id]/stream/[id].ts
 func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoName := strings.Split(r.URL.Path[1:], "/")[3]
-
 	videoComps := strings.Split(videoName, ".")
-	hashChecksum := sha1.New()
-	hashChecksum.Write([]byte(videoComps[0]))
-	fileId := fmt.Sprintf("%x", hashChecksum.Sum(nil))[:36]
-
-	log.Println("Video chunk requested: " + fileId)
+	segment := videoComps[0]
+	fileId := utils.GetFileId(segment)
 
 	getSegmentFile := "https://cloud.appwrite.io/v1/storage/buckets/" + config.AppConfig.AppwriteBucketID + "/files/" + fileId + "/view"
 
 	request, err := http.NewRequest(http.MethodGet, getSegmentFile, nil)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error Streaming Video", http.StatusInternalServerError)
+		logger.Log.Error("failed to get user from request", "segment", segment, "error", err)
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -327,22 +330,23 @@ func TSFileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 	response, err := client.Do(request)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error Streaming Video", http.StatusInternalServerError)
+		logger.Log.Error("failed to fetch segment file", "segment", segment, "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
 	}
 	defer response.Body.Close()
 
 	if response.StatusCode == 404 {
-		http.Error(w, "Video chunk not found", http.StatusNotFound)
+		logger.Log.Error("segment file not found", "segment", segment)
+		utils.SendError(w, http.StatusNotFound, "Segment file not found")
 		return
 	}
 
 	bodyBytes, err := io.ReadAll(response.Body)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error Streaming Video", http.StatusInternalServerError)
+		logger.Log.Error("failed to read segment file", "segment", segment, "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Error reading segment file")
 		return
 	}
 
@@ -357,7 +361,8 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoId := r.URL.Path[len("/video/"):]
 	user, err := utils.GetUserFromRequest(r)
 	if err != nil {
-		http.Error(w, "Error validating the request", http.StatusInternalServerError)
+		logger.Log.Error("failed to decode request body", "error", err)
+		utils.SendError(w, http.StatusBadRequest, "Invalid Request Body")
 		return
 	}
 
@@ -369,7 +374,8 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var reqBody UpdateRequest
 	err = json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
-		http.Error(w, "Invalid JSON body", http.StatusBadRequest)
+		logger.Log.Warn("failed to get user from request", "error", err)
+		utils.SendError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
@@ -381,29 +387,37 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 			description=$2
 		WHERE
 			video_id=$3
-			AND user_id=$4;
+		AND
+			user_id=$4;
 	`)
 
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Error("failed to prepare update query", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 
 	result, err := query.Exec(reqBody.Title, reqBody.Description, videoId, user.ID)
 
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Error Streaming Video", http.StatusInternalServerError)
+		logger.Log.Error("failed to execute update query", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
 		return
-	} else {
-		rows, _ := result.RowsAffected()
-		if rows == 0 {
-			http.Error(w, "No record found with given ID", http.StatusNotFound)
-			return
-		}
 	}
 
-	log.Println("Database record updated.")
-	w.Header().Set("Content-Type", "application/json")
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		logger.Log.Error("failed to get rows affected", "error", err)
+		return
+	}
+
+	if rowsAffected == 0 {
+		logger.Log.Info("video not found for update", "videoId", videoId, "userId", user.ID)
+		utils.SendError(w, http.StatusNotFound, "Video not found")
+		return
+	}
+
+	logger.Log.Info("video details updated", "videoId", videoId, "userId", user.ID)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -412,7 +426,6 @@ func UpdateHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 func DeleteHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	videoId := r.URL.Path[len("/video/"):]
 
-	log.Println("Updating delete_flag in database record...")
 	updateStatement, err := db.Prepare(`
 		UPDATE
 			videos
@@ -423,15 +436,17 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	`)
 
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Error("failed to prepare update statement", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 
 	_, err = updateStatement.Exec(1, videoId)
 
 	if err != nil {
-		log.Fatal(err)
-	} else {
-		log.Println("Database record updated.")
+		logger.Log.Error("failed to execute update statement", "error", err)
+		utils.SendError(w, http.StatusInternalServerError, "Internal Server Error")
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
