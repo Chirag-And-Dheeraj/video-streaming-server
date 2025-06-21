@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"strings"
 	"strconv"
+	"strings"
+	"video-streaming-server/shared/logger"
 )
 
 type FileType struct {
@@ -113,5 +114,6 @@ func LoadConfig(envFile string) error {
 	}
 
 	AppConfig = config
+	logger.Log.Info("Configuration loaded successfully")
 	return nil
 }

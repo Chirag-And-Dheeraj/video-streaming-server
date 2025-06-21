@@ -313,7 +313,6 @@ func main() {
 	}
 
 	logger.Init(config.AppConfig.Debug)
-	logger.Log.Info("Configuration loaded successfully")
 	setUpRoutes()
 	logger.Log.Info(
 		"Dekho server is listening on",
