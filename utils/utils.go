@@ -634,7 +634,12 @@ func GetUserFromRequest(r *http.Request) (*types.User, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error getting auth token from request: %w", err)
 	}
-	db, _ := database.GetDBConn()
+	db, err := database.GetDBConn()
+
+	if err != nil {
+		return nil, fmt.Errorf("error getting database connection: %w", err)
+	}
+
 	userRepository := repositories.NewUserRepository(db)
 	token, err := VerifyToken(authToken.Value)
 	if err != nil {
@@ -761,10 +766,11 @@ func GetRefererPathFromRequest(r *http.Request) (string, error) {
 func PrettyPrintMap(inputMap any, mapName string) {
 	data, err := json.MarshalIndent(inputMap, "", "  ")
 	if err != nil {
-		fmt.Sprintf("error marshaling %s map: %v", mapName, err)
+		log.Printf("error marshaling %s map: %v\n", mapName, err)
+		return
 	}
 
-	fmt.Sprintf("%s:\n%s", mapName, data)
+	log.Printf("%s:\n%s\n", mapName, data)
 }
 
 func Chain(h http.HandlerFunc, middlewares ...func(http.HandlerFunc) http.HandlerFunc) http.HandlerFunc {

@@ -289,11 +289,11 @@ func serverSentEventsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func setUpRoutes() {
-	logger.Log.Info("setting up routes")
+	logger.Log.Debug("setting up routes")
 	http.HandleFunc("/", utils.Chain(homePageHandler, mw.Logging))
 	http.HandleFunc("/register", utils.Chain(registerPageHandler, mw.Logging))
 	http.HandleFunc("/login", utils.Chain(loginPageHandler, mw.Logging))
-	http.HandleFunc("/logout", logoutHandler)
+	http.HandleFunc("/logout", utils.Chain(logoutHandler, mw.Logging))
 	http.HandleFunc("/upload", utils.Chain(uploadPageHandler, mw.Logging, mw.AuthRequired))
 	http.HandleFunc("/list", utils.Chain(listPageHandler, mw.Logging, mw.AuthRequired))
 	http.HandleFunc("/watch", utils.Chain(watchPageHandler, mw.Logging, mw.AuthRequired))
@@ -307,24 +307,15 @@ func setUpRoutes() {
 
 func main() {
 
-	// TODO:
-	// file, err := os.OpenFile("server.logger.Log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// // TODO: I want to see if I dont close the file, what and how memory leaks
-	// defer file.Close()
-
-	// w := io.MultiWriter(os.Stdout, file)
-
 	if err := config.LoadConfig(".env"); err != nil {
 		slog.Error("Failed to load configuration", "error", err)
 		os.Exit(1)
 	}
 
 	logger.Init(config.AppConfig.Debug)
+	logger.Log.Info("Configuration loaded successfully")
 	setUpRoutes()
-	slog.Info(
+	logger.Log.Info(
 		"Dekho server is listening on",
 		"address", config.AppConfig.Addr,
 		"port", config.AppConfig.Port,
