@@ -3,8 +3,8 @@ package database
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"video-streaming-server/config"
+	"video-streaming-server/shared/logger"
 
 	_ "github.com/lib/pq"
 )
@@ -35,7 +35,7 @@ func newDBConfig() (*DBConfig, error) {
 
 // Connect establishes a connection to the PostgreSQL database
 func Connect(config *DBConfig) (*sql.DB, error) {
-	log.Println("Initializing PostgreSQL database...")
+	logger.Log.Debug("initializing PostgreSQL database")
 
 	psqlInfo := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		config.Host, config.Port, config.User, config.Password, config.Name, config.SSLMode)
@@ -50,23 +50,21 @@ func Connect(config *DBConfig) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
-	log.Println("Database connection established.")
-
-	log.Println("Database initialized.")
+	logger.Log.Info("database initialized")
 	return db, nil
 }
 
-func GetDBConn() *sql.DB {
+func GetDBConn() (*sql.DB, error) {
 	if DB == nil {
 		dbConfig, err := newDBConfig()
 		if err != nil {
-			log.Fatalf("Failed to load database config: %v", err)
+			return nil, fmt.Errorf("failed to create database config: %w", err)
 		}
 		DB, err = Connect(dbConfig)
 
 		if err != nil {
-			log.Fatalf("Failed to connect to database: %v", err)
+			return nil, fmt.Errorf("failed to connect to database: %w", err)
 		}
 	}
-	return DB
+	return DB, nil
 }

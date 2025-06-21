@@ -5,8 +5,9 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -35,6 +36,7 @@ type Config struct {
 	SSLMode                string
 	JWTSecretKey           string
 	FileSizeLimit          string
+	Debug                  bool
 }
 
 var AppConfig *Config
@@ -64,7 +66,7 @@ func LoadEnvFile(filename string) error {
 		key = strings.TrimSpace(key)
 		value = strings.TrimSpace(value)
 		os.Setenv(key, value)
-		log.Printf("Set %s=%s", key, value)
+		slog.Debug("Loaded environment variable", "key", key, "value", value)
 	}
 
 	if err := scanner.Err(); err != nil {
@@ -77,6 +79,11 @@ func LoadEnvFile(filename string) error {
 func LoadConfig(envFile string) error {
 	if err := LoadEnvFile(envFile); err != nil {
 		return err
+	}
+
+	debug, err := strconv.ParseBool(os.Getenv("DEBUG"))
+	if err != nil {
+		return fmt.Errorf("error parsing DEBUG environment variable: %w", err)
 	}
 
 	config := &Config{
@@ -95,6 +102,7 @@ func LoadConfig(envFile string) error {
 		SSLMode:                os.Getenv("SSL_MODE"),
 		JWTSecretKey:           os.Getenv("JWT_SECRET_KEY"),
 		FileSizeLimit:          os.Getenv("FILE_SIZE_LIMIT"),
+		Debug:                  debug,
 	}
 
 	if config.JWTSecretKey == "" {
@@ -105,7 +113,6 @@ func LoadConfig(envFile string) error {
 	}
 
 	AppConfig = config
-
-	log.Println("Configuration loaded successfully.")
+	slog.Info("Configuration loaded successfully")
 	return nil
 }
